@@ -18,7 +18,6 @@ ScriptRunning = true
 ProtectionEnabled = false
 Connections = {}
 
--- Character refs (global, usados por otros módulos)
 Character = nil
 Humanoid = nil
 RootPart = nil
@@ -40,19 +39,15 @@ Connections.CharacterAdded = LocalPlayer.CharacterAdded:Connect(UpdateCharacter)
 function ShutdownFramework()
     ScriptRunning = false
     ProtectionEnabled = false
-
     for _, c in pairs(Connections) do
-        pcall(function()
-            c:Disconnect()
-        end)
+        pcall(function() c:Disconnect() end)
     end
-
     if CoreGui:FindFirstChild("ProtectionUI") then
         CoreGui.ProtectionUI:Destroy()
     end
 end
 
--- ================= UI BASE =================
+-- ================= UI CREATION =================
 if CoreGui:FindFirstChild("ProtectionUI") then
     CoreGui.ProtectionUI:Destroy()
 end
@@ -63,33 +58,6 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
 Main = Instance.new("Frame")
--- ================= HEADER =================
-Header = Instance.new("Frame")
-Header.Parent = Main
-Header.Size = UDim2.fromScale(1, 0.18)
-Header.BackgroundTransparency = 1
-
--- Title
-TitleLabel.Parent = Header
-TitleLabel.Position = UDim2.fromScale(0, 0)
-TitleLabel.Size = UDim2.fromScale(1, 1)
-
--- ================= SCROLL CONTENT =================
-Content = Instance.new("ScrollingFrame")
-Content.Parent = Main
-Content.Position = UDim2.fromScale(0, 0.18)
-Content.Size = UDim2.fromScale(1, 0.82)
-Content.CanvasSize = UDim2.new(0, 0, 2, 0) -- scroll vertical
-Content.ScrollBarImageTransparency = 0.3
-Content.ScrollBarThickness = 6
-Content.BackgroundTransparency = 1
-Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
-CreateSection("🛡 PROTECTION")
-
-UIList = Instance.new("UIListLayout")
-UIList.Parent = Content
-UIList.Padding = UDim.new(0, 12)
-UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 Main.Parent = ScreenGui
 Main.Size = UDim2.fromScale(0.55, 0.30)
 Main.Position = UDim2.fromScale(0.225, 0.35)
@@ -97,26 +65,57 @@ Main.BackgroundColor3 = Color3.fromRGB(24, 26, 32)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
-local bg = Instance.new("UIGradient", Main)
-bg.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 35, 55)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 20, 30))
-}
-bg.Rotation = 90
-
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 16)
 
--- ================= TITLE BAR =================
+-- HEADER
+Header = Instance.new("Frame")
+Header.Parent = Main
+Header.Size = UDim2.fromScale(1, 0.18)
+Header.BackgroundTransparency = 1
+
 TitleLabel = Instance.new("TextLabel")
-TitleLabel.Parent = Main
-TitleLabel.Size = UDim2.fromScale(1, 0.18)
+TitleLabel.Parent = Header
+TitleLabel.Size = UDim2.fromScale(1, 1)
 TitleLabel.BackgroundTransparency = 1
 TitleLabel.Text = "🛡 Universal Protection Framework"
 TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextScaled = true
 TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 
--- Close Button
+-- SCROLL CONTENT
+Content = Instance.new("ScrollingFrame")
+Content.Parent = Main
+Content.Position = UDim2.fromScale(0, 0.18)
+Content.Size = UDim2.fromScale(1, 0.82)
+Content.CanvasSize = UDim2.new(0, 0, 2, 0)
+Content.ScrollBarImageTransparency = 0.3
+Content.ScrollBarThickness = 6
+Content.BackgroundTransparency = 1
+Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+UIList = Instance.new("UIListLayout")
+UIList.Parent = Content
+UIList.Padding = UDim.new(0, 12)
+UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+-- SECTION HELPER (must be defined before use)
+function CreateSection(title)
+    local Section = Instance.new("TextLabel")
+    Section.Parent = Content
+    Section.Size = UDim2.fromScale(0.9, 0.06)
+    Section.BackgroundTransparency = 1
+    Section.Text = title
+    Section.Font = Enum.Font.GothamBold
+    Section.TextScaled = true
+    Section.TextColor3 = Color3.fromRGB(180, 180, 180)
+    Section.TextXAlignment = Enum.TextXAlignment.Left
+    return Section
+end
+
+-- Now we can safely create the first section label
+CreateSection("🛡 PROTECTION")
+
+-- CLOSE BUTTON
 CloseButton = Instance.new("TextButton")
 CloseButton.Parent = Main
 CloseButton.Size = UDim2.fromScale(0.12, 0.18)
@@ -127,10 +126,9 @@ CloseButton.TextScaled = true
 CloseButton.BackgroundColor3 = Color3.fromRGB(170, 60, 60)
 CloseButton.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", CloseButton).CornerRadius = UDim.new(0, 12)
-
 CloseButton.MouseButton1Click:Connect(ShutdownFramework)
 
--- Minimize Button
+-- MINIMIZE BUTTON
 MinimizeButton = Instance.new("TextButton")
 MinimizeButton.Parent = Main
 MinimizeButton.Size = UDim2.fromScale(0.12, 0.18)
@@ -142,15 +140,14 @@ MinimizeButton.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
 MinimizeButton.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", MinimizeButton).CornerRadius = UDim.new(0, 12)
 
-local Minimized = false
+-- Disable old approximate minimize behavior (handled by FASE B)
 MinimizeButton.MouseButton1Click:Connect(function()
-    ToggleUI()
+    Main.Visible = false
 end)
 
--- ================= INFO LABEL (FPS + STATUS) =================
+-- INFO LABEL
 InfoLabel = Instance.new("TextLabel")
 InfoLabel.Parent = Content
-InfoLabel.Position = UDim2.fromScale(0.05, 0.22)
 InfoLabel.Size = UDim2.fromScale(0.9, 0.15)
 InfoLabel.BackgroundTransparency = 1
 InfoLabel.Font = Enum.Font.Gotham
@@ -158,10 +155,9 @@ InfoLabel.TextScaled = true
 InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 InfoLabel.Text = "FPS: -- | Status: OFF"
 
--- ================= PROTECTION TOGGLE =================
+-- PROTECTION BUTTON
 ProtectionToggle = Instance.new("TextButton")
 ProtectionToggle.Parent = Content
-ProtectionToggle.Position = UDim2.fromScale(0.2, 0.42)
 ProtectionToggle.Size = UDim2.fromScale(0.6, 0.20)
 ProtectionToggle.Text = "Enable Protection"
 ProtectionToggle.Font = Enum.Font.GothamBold
@@ -175,62 +171,11 @@ ProtectionToggle.MouseButton1Click:Connect(function()
     ProtectionToggle.Text = ProtectionEnabled and "Disable Protection" or "Enable Protection"
 end)
 
--- ================= FPS MONITOR =================
+-- FPS MONITOR
 Connections.FPS = RunService.Heartbeat:Connect(function(dt)
     if not ScriptRunning then return end
-
     local fps = math.floor(1 / dt)
     InfoLabel.Text = "FPS: " .. fps .. " | Status: " .. (ProtectionEnabled and "ACTIVE" or "OFF")
 end)
 
--- ================= CORE READY =================
 print("✅ Core module loaded successfully")
--- ================= SECTION HELPER =================
-function CreateSection(title)
-    local Section = Instance.new("TextLabel")
-    Section.Parent = Content
-    Section.Size = UDim2.fromScale(0.9, 0.06)
-    Section.BackgroundTransparency = 1
-    Section.Text = title
-    Section.Font = Enum.Font.GothamBold
-    Section.TextScaled = true
-    Section.TextColor3 = Color3.fromRGB(200, 200, 230)
-    Section.TextXAlignment = Enum.TextXAlignment.Left
-    return Section
-end
--- ================= FLOATING TOGGLE BUTTON =================
-
--- Estado UI
-UIVisible = true
-
--- Botón flotante
-FloatingButton = Instance.new("TextButton")
-FloatingButton.Parent = ScreenGui
-FloatingButton.Size = UDim2.fromScale(0.12, 0.12)
-FloatingButton.Position = UDim2.fromScale(0.85, 0.65)
-FloatingButton.Text = "🛡"
-FloatingButton.Font = Enum.Font.GothamBold
-FloatingButton.TextScaled = true
-FloatingButton.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
-FloatingButton.TextColor3 = Color3.fromRGB(230, 230, 230)
-FloatingButton.AutoButtonColor = true
-FloatingButton.Visible = false
-FloatingButton.Active = true
-FloatingButton.Draggable = true
-local fg = Instance.new("UIGradient", FloatingButton)
-fg.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 130, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 80, 180))
-}
-fg.Rotation = 45
-
-Instance.new("UICorner", FloatingButton).CornerRadius = UDim.new(1, 0)
-
--- Mostrar / ocultar UI
-local function ToggleUI()
-    UIVisible = not UIVisible
-    Main.Visible = UIVisible
-    FloatingButton.Visible = not UIVisible
-end
-
-FloatingButton.MouseButton1Click:Connect(ToggleUI)
