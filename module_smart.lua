@@ -1,48 +1,30 @@
 -- =========================================================
--- MODULE SMART
+-- MODULE SMART (CLIENT SAFE)
 -- Smart Anti-Fling / No-Collision / Panic Button
 -- Platform: Android / Delta
--- Version: 0.9.x (Smart)
+-- Version: 0.9.x (Client Safe)
 -- =========================================================
 
 -- ================= SAFETY CHECK =================
-if not ScriptRunning or not RootPart then
+if not ScriptRunning or not RootPart or not Character then
     warn("❌ Core not ready. Smart module aborted.")
     return
 end
 
-PhysicsService = game:GetService("PhysicsService")
-
 -- ================= GLOBAL STATE =================
-SmartMode = SmartMode or "SAFE"     -- SAFE / PVP
-NoPlayerCollision = NoPlayerCollision or false
+SmartMode = SmartMode or "SAFE" -- SAFE / PVP
 FlingDetected = false
 FlingEvents = FlingEvents or 0
 DangerousPlayers = DangerousPlayers or {}
 
--- ================= COLLISION GROUPS =================
-pcall(function() PhysicsService:CreateCollisionGroup("LocalPlayerGroup") end)
-pcall(function() PhysicsService:CreateCollisionGroup("DangerPlayerGroup") end)
-
-PhysicsService:CollisionGroupSetCollidable("LocalPlayerGroup", "DangerPlayerGroup", false)
-
-local function SetGroup(char, group)
+-- ================= CLIENT-SAFE NO COLLISION =================
+local function SetPlayerCollision(char, canCollide)
     for _, p in ipairs(char:GetDescendants()) do
         if p:IsA("BasePart") then
-            PhysicsService:SetPartCollisionGroup(p, group)
+            p.CanCollide = canCollide
         end
     end
 end
-
--- Assign local player group
-if Character then
-    SetGroup(Character, "LocalPlayerGroup")
-end
-
-Connections.AssignLocalGroup = Players.LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(1)
-    SetGroup(char, "LocalPlayerGroup")
-end)
 
 -- ================= UI =================
 SmartLabel = Instance.new("TextLabel")
@@ -55,6 +37,7 @@ SmartLabel.TextScaled = true
 SmartLabel.TextColor3 = Color3.fromRGB(255, 180, 80)
 SmartLabel.Text = "Smart Protection: CLEAR"
 
+-- Mode Button
 ModeButton = Instance.new("TextButton")
 ModeButton.Parent = Main
 ModeButton.Position = UDim2.fromScale(0.05, 0.78)
@@ -110,7 +93,7 @@ PanicButton.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ================= FLING DETECTOR =================
+-- ================= FLING DETECTION =================
 local function MarkDanger(plr)
     DangerousPlayers[plr] = tick()
     FlingDetected = true
@@ -120,9 +103,13 @@ end
 local function CleanupDanger()
     for plr, t in pairs(DangerousPlayers) do
         if tick() - t > 3 then
+            if plr.Character then
+                SetPlayerCollision(plr.Character, true) -- restore collision
+            end
             DangerousPlayers[plr] = nil
         end
     end
+
     if next(DangerousPlayers) == nil then
         FlingDetected = false
     end
@@ -139,6 +126,7 @@ Connections.SmartHeartbeat = RunService.Heartbeat:Connect(function()
             local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local vel = hrp.AssemblyLinearVelocity.Magnitude
+
                 if vel > (SmartMode == "SAFE" and 80 or 120) then
                     MarkDanger(plr)
                 end
@@ -149,8 +137,8 @@ Connections.SmartHeartbeat = RunService.Heartbeat:Connect(function()
                     end
                 end
 
-                if DangerousPlayers[plr] and plr.Character then
-                    SetGroup(plr.Character, "DangerPlayerGroup")
+                if DangerousPlayers[plr] then
+                    SetPlayerCollision(plr.Character, false) -- no collision with flinger
                 end
             end
         end
@@ -161,4 +149,4 @@ Connections.SmartHeartbeat = RunService.Heartbeat:Connect(function()
         or "Smart Protection: CLEAR"
 end)
 
-print("✅ Smart module loaded successfully")
+print("✅ Smart module (client-safe) loaded successfully")
