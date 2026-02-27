@@ -1,2 +1,0 @@
-# script_roblox_proteccion_experimental
-Roblox script
