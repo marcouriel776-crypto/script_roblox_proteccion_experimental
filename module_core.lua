@@ -97,6 +97,12 @@ Main.BackgroundColor3 = Color3.fromRGB(24, 26, 32)
 Main.BorderSizePixel = 0
 Main.Active = true
 Main.Draggable = true
+local bg = Instance.new("UIGradient", Main)
+bg.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 35, 55)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 20, 30))
+}
+bg.Rotation = 90
 
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 16)
 
@@ -188,7 +194,7 @@ function CreateSection(title)
     Section.Text = title
     Section.Font = Enum.Font.GothamBold
     Section.TextScaled = true
-    Section.TextColor3 = Color3.fromRGB(180, 180, 180)
+    Section.TextColor3 = Color3.fromRGB(200, 200, 230)
     Section.TextXAlignment = Enum.TextXAlignment.Left
     return Section
 end
@@ -211,6 +217,12 @@ FloatingButton.AutoButtonColor = true
 FloatingButton.Visible = false
 FloatingButton.Active = true
 FloatingButton.Draggable = true
+local fg = Instance.new("UIGradient", FloatingButton)
+fg.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(90, 130, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 80, 180))
+}
+fg.Rotation = 45
 
 Instance.new("UICorner", FloatingButton).CornerRadius = UDim.new(1, 0)
 
