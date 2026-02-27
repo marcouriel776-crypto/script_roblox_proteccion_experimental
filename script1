@@ -1,0 +1,696 @@
+--// Universal Protection Script - Phase 2
+--// Android | Delta Executor
+--// Protection + FPS Monitor
+
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- State
+local ScriptRunning = true
+local ProtectionEnabled = false
+local BlockedEvents = 0
+local Connections = {}
+
+-- Character refs
+local Character, Humanoid, RootPart
+
+local function UpdateCharacter()
+    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    Humanoid = Character:WaitForChild("Humanoid")
+    RootPart = Character:WaitForChild("HumanoidRootPart")
+end
+UpdateCharacter()
+Connections.CharAdded = LocalPlayer.CharacterAdded:Connect(UpdateCharacter)
+
+-- FULL SHUTDOWN
+local function Shutdown()
+    ScriptRunning = false
+    ProtectionEnabled = false
+    for _, c in pairs(Connections) do
+        pcall(function() c:Disconnect() end)
+    end
+    if CoreGui:FindFirstChild("ProtectionUI") then
+        CoreGui.ProtectionUI:Destroy()
+    end
+end
+
+-- ================= UI =================
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "ProtectionUI"
+ScreenGui.ResetOnSpawn = false
+
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.fromScale(0.55, 0.28)
+Main.Position = UDim2.fromScale(0.225, 0.35)
+Main.BackgroundColor3 = Color3.fromRGB(25,25,30)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0,16)
+
+-- Title
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.fromScale(1, 0.22)
+Title.BackgroundTransparency = 1
+Title.Text = "🛡 Protection Panel"
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+Title.TextColor3 = Color3.fromRGB(220,220,220)
+
+-- Close
+local Close = Instance.new("TextButton", Main)
+Close.Size = UDim2.fromScale(0.12, 0.22)
+Close.Position = UDim2.fromScale(0.88, 0)
+Close.Text = "X"
+Close.Font = Enum.Font.GothamBold
+Close.TextScaled = true
+Close.BackgroundColor3 = Color3.fromRGB(170,50,50)
+Close.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", Close).CornerRadius = UDim.new(0,12)
+Close.MouseButton1Click:Connect(Shutdown)
+
+-- Minimize
+local Min = Instance.new("TextButton", Main)
+Min.Size = UDim2.fromScale(0.12, 0.22)
+Min.Position = UDim2.fromScale(0.76, 0)
+Min.Text = "—"
+Min.Font = Enum.Font.GothamBold
+Min.TextScaled = true
+Min.BackgroundColor3 = Color3.fromRGB(60,60,70)
+Min.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", Min).CornerRadius = UDim.new(0,12)
+
+local Minimized = false
+Min.MouseButton1Click:Connect(function()
+    Minimized = not Minimized
+    Main.Size = Minimized and UDim2.fromScale(0.55,0.09) or UDim2.fromScale(0.55,0.28)
+end)
+
+-- FPS + Status
+local Info = Instance.new("TextLabel", Main)
+Info.Position = UDim2.fromScale(0.05,0.28)
+Info.Size = UDim2.fromScale(0.9,0.18)
+Info.BackgroundTransparency = 1
+Info.Font = Enum.Font.Gotham
+Info.TextScaled = true
+Info.TextColor3 = Color3.fromRGB(200,200,200)
+Info.Text = "FPS: -- | Status: OFF"
+
+-- Toggle
+local Toggle = Instance.new("TextButton", Main)
+Toggle.Position = UDim2.fromScale(0.2,0.52)
+Toggle.Size = UDim2.fromScale(0.6,0.22)
+Toggle.Text = "Enable Protection"
+Toggle.Font = Enum.Font.GothamBold
+Toggle.TextScaled = true
+Toggle.BackgroundColor3 = Color3.fromRGB(60,130,200)
+Toggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0,14)
+
+Toggle.MouseButton1Click:Connect(function()
+    ProtectionEnabled = not ProtectionEnabled
+    Toggle.Text = ProtectionEnabled and "Disable Protection" or "Enable Protection"
+end)
+
+-- Events counter
+local Counter = Instance.new("TextLabel", Main)
+Counter.Position = UDim2.fromScale(0.05,0.78)
+Counter.Size = UDim2.fromScale(0.9,0.15)
+Counter.BackgroundTransparency = 1
+Counter.Font = Enum.Font.Gotham
+Counter.TextScaled = true
+Counter.TextColor3 = Color3.fromRGB(180,180,180)
+Counter.Text = "Blocked Events: 0"
+
+-- ================= PROTECTION =================
+
+local LastPos = Vector3.zero
+local LastTick = tick()
+
+Connections.Heartbeat = RunService.Heartbeat:Connect(function(dt)
+    if not ScriptRunning then return end
+
+    -- FPS
+    local fps = math.floor(1 / dt)
+    local status = ProtectionEnabled and "ACTIVE" or "OFF"
+    Info.Text = "FPS: "..fps.." | Status: "..status
+
+    if not ProtectionEnabled then
+        LastPos = RootPart.Position
+        return
+    end
+
+    -- Anti-Velocity / Force
+    local dist = (RootPart.Position - LastPos).Magnitude
+    if dist > 35 then
+        RootPart.AssemblyLinearVelocity = Vector3.zero
+        RootPart.AssemblyAngularVelocity = Vector3.zero
+        RootPart.CFrame = CFrame.new(LastPos)
+        BlockedEvents += 1
+        Counter.Text = "Blocked Events: "..BlockedEvents
+    end
+
+    -- Safe Client: remove abusive forces
+    for _, v in pairs(RootPart:GetChildren()) do
+        if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") or v:IsA("BodyAngularVelocity") then
+            v:Destroy()
+            BlockedEvents += 1
+            Counter.Text = "Blocked Events: "..BlockedEvents
+        end
+    end
+
+    LastPos = RootPart.Position
+end)
+-- ================= GOD MODE (PHASE 3) =================
+
+local GodModeEnabled = false
+local GodConnection
+
+-- UI: God Mode Toggle
+local GodToggle = Instance.new("TextButton", Main)
+GodToggle.Position = UDim2.fromScale(0.2, 0.78)
+GodToggle.Size = UDim2.fromScale(0.6, 0.18)
+GodToggle.Text = "God Mode: OFF"
+GodToggle.Font = Enum.Font.GothamBold
+GodToggle.TextScaled = true
+GodToggle.BackgroundColor3 = Color3.fromRGB(120, 60, 60)
+GodToggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", GodToggle).CornerRadius = UDim.new(0,14)
+
+GodToggle.MouseButton1Click:Connect(function()
+    GodModeEnabled = not GodModeEnabled
+    GodToggle.Text = GodModeEnabled and "God Mode: ON" or "God Mode: OFF"
+    GodToggle.BackgroundColor3 = GodModeEnabled
+        and Color3.fromRGB(60, 160, 90)
+        or Color3.fromRGB(120, 60, 60)
+end)
+
+-- God Mode Logic
+local function ApplyGodMode()
+    if not Humanoid or Humanoid.Health <= 0 then return end
+
+    if Humanoid.MaxHealth < 100 then
+        Humanoid.MaxHealth = 100
+    end
+
+    if Humanoid.Health < Humanoid.MaxHealth then
+        Humanoid.Health = Humanoid.MaxHealth
+    end
+end
+
+-- Hook heartbeat (lightweight)
+Connections.GodHeartbeat = RunService.Heartbeat:Connect(function()
+    if not ScriptRunning then return end
+    if GodModeEnabled then
+        ApplyGodMode()
+    end
+end)
+
+-- Reapply on respawn
+Connections.GodRespawn = LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(1)
+    if GodModeEnabled then
+        ApplyGodMode()
+    end
+end)
+-- ================= PLAYER NO-COLLISION (PHASE 4) =================
+
+local PhysicsService = game:GetService("PhysicsService")
+local NoPlayerCollision = false
+
+local LOCAL_GROUP = "LocalPlayerGroup"
+local PLAYER_GROUP = "OtherPlayersGroup"
+
+-- Create collision groups safely
+pcall(function()
+    PhysicsService:CreateCollisionGroup(LOCAL_GROUP)
+end)
+
+pcall(function()
+    PhysicsService:CreateCollisionGroup(PLAYER_GROUP)
+end)
+
+-- Disable collision between local player and others
+PhysicsService:CollisionGroupSetCollidable(LOCAL_GROUP, PLAYER_GROUP, false)
+
+-- Assign parts to collision groups
+local function SetCharacterCollision(char, group)
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            PhysicsService:SetPartCollisionGroup(part, group)
+        end
+    end
+end
+
+-- Apply to other players
+local function ApplyToOtherPlayers()
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            SetCharacterCollision(plr.Character, PLAYER_GROUP)
+        end
+    end
+end
+
+-- UI Toggle
+local NoClipToggle = Instance.new("TextButton", Main)
+NoClipToggle.Position = UDim2.fromScale(0.2, 0.96)
+NoClipToggle.Size = UDim2.fromScale(0.6, 0.18)
+NoClipToggle.Text = "Player No-Collision: OFF"
+NoClipToggle.Font = Enum.Font.GothamBold
+NoClipToggle.TextScaled = true
+NoClipToggle.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+NoClipToggle.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", NoClipToggle).CornerRadius = UDim.new(0,14)
+
+NoClipToggle.MouseButton1Click:Connect(function()
+    NoPlayerCollision = not NoPlayerCollision
+    NoClipToggle.Text = NoPlayerCollision and "Player No-Collision: ON" or "Player No-Collision: OFF"
+    NoClipToggle.BackgroundColor3 = NoPlayerCollision
+        and Color3.fromRGB(70, 150, 200)
+        or Color3.fromRGB(90, 90, 90)
+
+    if NoPlayerCollision and Character then
+        SetCharacterCollision(Character, LOCAL_GROUP)
+        ApplyToOtherPlayers()
+    elseif Character then
+        SetCharacterCollision(Character, "Default")
+    end
+end)
+
+-- Handle respawn
+Connections.NoClipRespawn = LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(1)
+    if NoPlayerCollision then
+        SetCharacterCollision(char, LOCAL_GROUP)
+        ApplyToOtherPlayers()
+    end
+end)
+
+-- Handle new players
+Connections.NewPlayer = Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        if NoPlayerCollision then
+            SetCharacterCollision(char, PLAYER_GROUP)
+        end
+    end)
+end)
+-- ================= SMART PROTECTION (PHASE 5) =================
+
+local PhysicsService = game:GetService("PhysicsService")
+
+local SmartMode = "SAFE" -- SAFE / PVP
+local SmartEnabled = true
+local FlingDetected = false
+local FlingCount = 0
+local DangerousPlayers = {}
+
+-- UI: Smart Panel
+local SmartLabel = Instance.new("TextLabel", Main)
+SmartLabel.Position = UDim2.fromScale(0.05, 0.60)
+SmartLabel.Size = UDim2.fromScale(0.9, 0.12)
+SmartLabel.BackgroundTransparency = 1
+SmartLabel.Font = Enum.Font.GothamBold
+SmartLabel.TextScaled = true
+SmartLabel.TextColor3 = Color3.fromRGB(255,180,80)
+SmartLabel.Text = "Smart Protection: ACTIVE"
+
+local ModeButton = Instance.new("TextButton", Main)
+ModeButton.Position = UDim2.fromScale(0.2, 0.90)
+ModeButton.Size = UDim2.fromScale(0.28, 0.16)
+ModeButton.Text = "Mode: SAFE"
+ModeButton.Font = Enum.Font.GothamBold
+ModeButton.TextScaled = true
+ModeButton.BackgroundColor3 = Color3.fromRGB(80,140,200)
+ModeButton.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", ModeButton).CornerRadius = UDim.new(0,12)
+
+local function UpdateModeUI()
+    ModeButton.Text = "Mode: "..SmartMode
+    ModeButton.BackgroundColor3 = SmartMode == "SAFE"
+        and Color3.fromRGB(80,140,200)
+        or Color3.fromRGB(120,120,120)
+end
+
+ModeButton.MouseButton1Click:Connect(function()
+    SmartMode = (SmartMode == "SAFE") and "PVP" or "SAFE"
+    UpdateModeUI()
+end)
+
+UpdateModeUI()
+
+-- Collision Groups (reuse if exists)
+pcall(function() PhysicsService:CreateCollisionGroup("DangerPlayer") end)
+pcall(function() PhysicsService:CollisionGroupSetCollidable("DangerPlayer", "LocalPlayerGroup", false) end)
+
+local function MarkDangerous(plr)
+    DangerousPlayers[plr] = tick()
+    FlingDetected = true
+    FlingCount += 1
+end
+
+local function CleanupDangerous()
+    for plr, t in pairs(DangerousPlayers) do
+        if tick() - t > 3 then
+            DangerousPlayers[plr] = nil
+        end
+    end
+    if next(DangerousPlayers) == nil then
+        FlingDetected = false
+    end
+end
+
+-- Assign collision only to dangerous players
+local function ApplySmartCollision()
+    if not NoPlayerCollision or not SmartEnabled then return end
+
+    for plr in pairs(DangerousPlayers) do
+        if plr.Character then
+            for _, part in ipairs(plr.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    PhysicsService:SetPartCollisionGroup(part, "DangerPlayer")
+                end
+            end
+        end
+    end
+end
+
+-- Detector Loop (lightweight)
+Connections.SmartHeartbeat = RunService.Heartbeat:Connect(function()
+    if not ScriptRunning then return end
+
+    CleanupDangerous()
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local vel = hrp.AssemblyLinearVelocity.Magnitude
+                if vel > (SmartMode == "SAFE" and 80 or 120) then
+                    MarkDangerous(plr)
+                end
+
+                for _, v in ipairs(hrp:GetChildren()) do
+                    if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") then
+                        MarkDangerous(plr)
+                    end
+                end
+            end
+        end
+    end
+
+    ApplySmartCollision()
+
+    SmartLabel.Text = FlingDetected
+        and ("⚠ Fling Detected | Events: "..FlingCount)
+        or "Smart Protection: CLEAR"
+end)
+-- ================= SAFE POSITION / RETURN SYSTEM (PHASE 6) =================
+
+local SafeAutoPoint = nil
+local SafeManualPoint = nil
+local AutoReturnEnabled = true
+local LastStableTick = tick()
+
+-- UI Section
+local ReturnLabel = Instance.new("TextLabel", Main)
+ReturnLabel.Position = UDim2.fromScale(0.05, 1.14)
+ReturnLabel.Size = UDim2.fromScale(0.9, 0.12)
+ReturnLabel.BackgroundTransparency = 1
+ReturnLabel.Font = Enum.Font.GothamBold
+ReturnLabel.TextScaled = true
+ReturnLabel.TextColor3 = Color3.fromRGB(180,220,255)
+ReturnLabel.Text = "📍 Recovery"
+
+local SetManual = Instance.new("TextButton", Main)
+SetManual.Position = UDim2.fromScale(0.05, 1.26)
+SetManual.Size = UDim2.fromScale(0.42, 0.18)
+SetManual.Text = "Set Manual Point"
+SetManual.Font = Enum.Font.GothamBold
+SetManual.TextScaled = true
+SetManual.BackgroundColor3 = Color3.fromRGB(80,140,200)
+SetManual.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", SetManual).CornerRadius = UDim.new(0,12)
+
+local ReturnManual = Instance.new("TextButton", Main)
+ReturnManual.Position = UDim2.fromScale(0.53, 1.26)
+ReturnManual.Size = UDim2.fromScale(0.42, 0.18)
+ReturnManual.Text = "Return Manual"
+ReturnManual.Font = Enum.Font.GothamBold
+ReturnManual.TextScaled = true
+ReturnManual.BackgroundColor3 = Color3.fromRGB(100,100,120)
+ReturnManual.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", ReturnManual).CornerRadius = UDim.new(0,12)
+
+local ReturnAuto = Instance.new("TextButton", Main)
+ReturnAuto.Position = UDim2.fromScale(0.2, 1.48)
+ReturnAuto.Size = UDim2.fromScale(0.6, 0.18)
+ReturnAuto.Text = "Return to Safe Point"
+ReturnAuto.Font = Enum.Font.GothamBold
+ReturnAuto.TextScaled = true
+ReturnAuto.BackgroundColor3 = Color3.fromRGB(70,160,120)
+ReturnAuto.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", ReturnAuto).CornerRadius = UDim.new(0,12)
+
+-- Actions
+SetManual.MouseButton1Click:Connect(function()
+    if RootPart then
+        SafeManualPoint = RootPart.CFrame
+    end
+end)
+
+ReturnManual.MouseButton1Click:Connect(function()
+    if SafeManualPoint and RootPart then
+        RootPart.CFrame = SafeManualPoint
+    end
+end)
+
+ReturnAuto.MouseButton1Click:Connect(function()
+    if SafeAutoPoint and RootPart then
+        RootPart.CFrame = SafeAutoPoint
+    end
+end)
+
+-- Auto Safe Point Tracking
+Connections.SafePointTracker = RunService.Heartbeat:Connect(function()
+    if not RootPart or not Humanoid then return end
+
+    local vel = RootPart.AssemblyLinearVelocity.Magnitude
+    local grounded = Humanoid.FloorMaterial ~= Enum.Material.Air
+
+    if grounded and vel < 10 then
+        SafeAutoPoint = RootPart.CFrame
+        LastStableTick = tick()
+    end
+
+    -- Emergency auto return
+    if AutoReturnEnabled then
+        if RootPart.Position.Y > 2000 or RootPart.Position.Y < -500 then
+            if SafeAutoPoint then
+                RootPart.CFrame = SafeAutoPoint
+            end
+        end
+    end
+end)
+
+-- On death recovery
+Connections.OnDeath = Humanoid.Died:Connect(function()
+    task.wait(1)
+    if SafeAutoPoint and RootPart then
+        RootPart.CFrame = SafeAutoPoint
+    end
+end)
+-- ================= PANIC BUTTON (PHASE 7) =================
+
+local PanicCooldown = false
+
+local PanicButton = Instance.new("TextButton", Main)
+PanicButton.Position = UDim2.fromScale(0.05, 1.70)
+PanicButton.Size = UDim2.fromScale(0.9, 0.22)
+PanicButton.Text = "🚨 PANIC BUTTON"
+PanicButton.Font = Enum.Font.GothamBold
+PanicButton.TextScaled = true
+PanicButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+PanicButton.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", PanicButton).CornerRadius = UDim.new(0,16)
+
+local function ActivatePanic()
+    if PanicCooldown then return end
+    PanicCooldown = true
+
+    -- Force SAFE MODE
+    ProtectionEnabled = true
+    SmartMode = "SAFE"
+    NoPlayerCollision = true
+
+    -- UI sync
+    Toggle.Text = "Disable Protection"
+    UpdateModeUI()
+
+    -- Restore position
+    if SafeAutoPoint and RootPart then
+        RootPart.CFrame = SafeAutoPoint
+    end
+
+    -- Clear forces
+    if RootPart then
+        RootPart.AssemblyLinearVelocity = Vector3.zero
+        RootPart.AssemblyAngularVelocity = Vector3.zero
+
+        for _, v in ipairs(RootPart:GetChildren()) do
+            if v:IsA("BodyVelocity")
+            or v:IsA("LinearVelocity")
+            or v:IsA("BodyAngularVelocity") then
+                v:Destroy()
+            end
+        end
+    end
+
+    -- Visual feedback
+    PanicButton.Text = "🚨 PANIC ACTIVE"
+    PanicButton.BackgroundColor3 = Color3.fromRGB(120, 120, 120)
+
+    task.delay(3, function()
+        PanicButton.Text = "🚨 PANIC BUTTON"
+        PanicButton.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+        PanicCooldown = false
+    end)
+end
+
+PanicButton.MouseButton1Click:Connect(ActivatePanic)
+-- ================= FREEZE & RECOVER (PHASE 8) =================
+
+local FrozenDetected = false
+local LastMoveTick = tick()
+local LastPosFR = nil
+
+-- UI
+local FreezeLabel = Instance.new("TextLabel", Main)
+FreezeLabel.Position = UDim2.fromScale(0.05, 1.96)
+FreezeLabel.Size = UDim2.fromScale(0.9, 0.12)
+FreezeLabel.BackgroundTransparency = 1
+FreezeLabel.Font = Enum.Font.GothamBold
+FreezeLabel.TextScaled = true
+FreezeLabel.TextColor3 = Color3.fromRGB(180,220,255)
+FreezeLabel.Text = "🧊 Freeze Status: NORMAL"
+
+local UnfreezeBtn = Instance.new("TextButton", Main)
+UnfreezeBtn.Position = UDim2.fromScale(0.2, 2.10)
+UnfreezeBtn.Size = UDim2.fromScale(0.6, 0.18)
+UnfreezeBtn.Text = "Unfreeze Player"
+UnfreezeBtn.Font = Enum.Font.GothamBold
+UnfreezeBtn.TextScaled = true
+UnfreezeBtn.BackgroundColor3 = Color3.fromRGB(90, 140, 200)
+UnfreezeBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", UnfreezeBtn).CornerRadius = UDim.new(0,14)
+
+-- Detect freeze
+Connections.FreezeDetect = RunService.Heartbeat:Connect(function()
+    if not RootPart or not Humanoid then return end
+
+    LastPosFR = LastPosFR or RootPart.Position
+    local moved = (RootPart.Position - LastPosFR).Magnitude > 0.2
+    local vel = RootPart.AssemblyLinearVelocity.Magnitude
+
+    if moved or vel > 1 then
+        LastMoveTick = tick()
+        FrozenDetected = false
+    end
+
+    if tick() - LastMoveTick > 3 then
+        FrozenDetected = true
+    end
+
+    FreezeLabel.Text = FrozenDetected
+        and "🧊 Freeze Status: FROZEN"
+        or "🧊 Freeze Status: NORMAL"
+
+    LastPosFR = RootPart.Position
+end)
+
+-- Recover function
+local function RecoverPlayer()
+    if not RootPart or not Humanoid then return end
+
+    -- Clear forces
+    RootPart.AssemblyLinearVelocity = Vector3.zero
+    RootPart.AssemblyAngularVelocity = Vector3.zero
+
+    for _, v in ipairs(RootPart:GetChildren()) do
+        if v:IsA("BodyVelocity")
+        or v:IsA("LinearVelocity")
+        or v:IsA("BodyAngularVelocity") then
+            v:Destroy()
+        end
+    end
+
+    -- Reset humanoid states
+    for _, state in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+        pcall(function()
+            Humanoid:SetStateEnabled(state, true)
+        end)
+    end
+
+    -- Tiny re-anchor trick
+    RootPart.Anchored = true
+    task.wait(0.15)
+    RootPart.Anchored = false
+
+    LastMoveTick = tick()
+    FrozenDetected = false
+end
+
+UnfreezeBtn.MouseButton1Click:Connect(RecoverPlayer)
+-- ================= ADAPTIVE PERFORMANCE MODE (PHASE 9) =================
+
+local PerfState = "NORMAL" -- NORMAL / SAFE
+local LowFPSThreshold = 35
+local RecoverFPSThreshold = 45
+local LastPerfSwitch = 0
+local PerfCooldown = 3 -- seconds
+
+-- UI
+local PerfLabel = Instance.new("TextLabel", Main)
+PerfLabel.Position = UDim2.fromScale(0.05, 2.32)
+PerfLabel.Size = UDim2.fromScale(0.9, 0.12)
+PerfLabel.BackgroundTransparency = 1
+PerfLabel.Font = Enum.Font.GothamBold
+PerfLabel.TextScaled = true
+PerfLabel.TextColor3 = Color3.fromRGB(200,200,200)
+PerfLabel.Text = "⚙ Performance: NORMAL"
+
+-- Helper
+local function SetPerfState(state)
+    PerfState = state
+    PerfLabel.Text = "⚙ Performance: "..state
+
+    if state == "SAFE" then
+        ProtectionEnabled = true
+        SmartMode = "SAFE"
+        Toggle.Text = "Disable Protection"
+        UpdateModeUI()
+    end
+end
+
+-- FPS monitor (reuses dt logic)
+Connections.PerfHeartbeat = RunService.Heartbeat:Connect(function(dt)
+    if not ScriptRunning then return end
+
+    local fps = math.floor(1 / dt)
+    if tick() - LastPerfSwitch < PerfCooldown then return end
+
+    if fps < LowFPSThreshold and PerfState ~= "SAFE" then
+        LastPerfSwitch = tick()
+        SetPerfState("SAFE")
+
+    elseif fps > RecoverFPSThreshold and PerfState ~= "NORMAL" then
+        LastPerfSwitch = tick()
+        PerfState = "NORMAL"
+        PerfLabel.Text = "⚙ Performance: NORMAL"
+    end
+end)
