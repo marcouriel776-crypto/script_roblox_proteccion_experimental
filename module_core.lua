@@ -138,10 +138,7 @@ Instance.new("UICorner", MinimizeButton).CornerRadius = UDim.new(0, 12)
 
 local Minimized = false
 MinimizeButton.MouseButton1Click:Connect(function()
-    Minimized = not Minimized
-    Main.Size = Minimized
-        and UDim2.fromScale(0.55, 0.08)
-        or UDim2.fromScale(0.55, 0.30)
+    ToggleUI()
 end)
 
 -- ================= INFO LABEL (FPS + STATUS) =================
@@ -195,3 +192,33 @@ function CreateSection(title)
     Section.TextXAlignment = Enum.TextXAlignment.Left
     return Section
 end
+-- ================= FLOATING TOGGLE BUTTON =================
+
+-- Estado UI
+UIVisible = true
+
+-- Botón flotante
+FloatingButton = Instance.new("TextButton")
+FloatingButton.Parent = ScreenGui
+FloatingButton.Size = UDim2.fromScale(0.12, 0.12)
+FloatingButton.Position = UDim2.fromScale(0.85, 0.65)
+FloatingButton.Text = "🛡"
+FloatingButton.Font = Enum.Font.GothamBold
+FloatingButton.TextScaled = true
+FloatingButton.BackgroundColor3 = Color3.fromRGB(40, 45, 60)
+FloatingButton.TextColor3 = Color3.fromRGB(230, 230, 230)
+FloatingButton.AutoButtonColor = true
+FloatingButton.Visible = false
+FloatingButton.Active = true
+FloatingButton.Draggable = true
+
+Instance.new("UICorner", FloatingButton).CornerRadius = UDim.new(1, 0)
+
+-- Mostrar / ocultar UI
+local function ToggleUI()
+    UIVisible = not UIVisible
+    Main.Visible = UIVisible
+    FloatingButton.Visible = not UIVisible
+end
+
+FloatingButton.MouseButton1Click:Connect(ToggleUI)
