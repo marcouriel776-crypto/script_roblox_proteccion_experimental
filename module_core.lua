@@ -63,6 +63,33 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
 Main = Instance.new("Frame")
+-- ================= HEADER =================
+Header = Instance.new("Frame")
+Header.Parent = Main
+Header.Size = UDim2.fromScale(1, 0.18)
+Header.BackgroundTransparency = 1
+
+-- Title
+TitleLabel.Parent = Header
+TitleLabel.Position = UDim2.fromScale(0, 0)
+TitleLabel.Size = UDim2.fromScale(1, 1)
+
+-- ================= SCROLL CONTENT =================
+Content = Instance.new("ScrollingFrame")
+Content.Parent = Main
+Content.Position = UDim2.fromScale(0, 0.18)
+Content.Size = UDim2.fromScale(1, 0.82)
+Content.CanvasSize = UDim2.new(0, 0, 2, 0) -- scroll vertical
+Content.ScrollBarImageTransparency = 0.3
+Content.ScrollBarThickness = 6
+Content.BackgroundTransparency = 1
+Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+CreateSection("🛡 PROTECTION")
+
+UIList = Instance.new("UIListLayout")
+UIList.Parent = Content
+UIList.Padding = UDim.new(0, 12)
+UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 Main.Parent = ScreenGui
 Main.Size = UDim2.fromScale(0.55, 0.30)
 Main.Position = UDim2.fromScale(0.225, 0.35)
@@ -119,7 +146,7 @@ end)
 
 -- ================= INFO LABEL (FPS + STATUS) =================
 InfoLabel = Instance.new("TextLabel")
-InfoLabel.Parent = Main
+InfoLabel.Parent = Content
 InfoLabel.Position = UDim2.fromScale(0.05, 0.22)
 InfoLabel.Size = UDim2.fromScale(0.9, 0.15)
 InfoLabel.BackgroundTransparency = 1
@@ -130,7 +157,7 @@ InfoLabel.Text = "FPS: -- | Status: OFF"
 
 -- ================= PROTECTION TOGGLE =================
 ProtectionToggle = Instance.new("TextButton")
-ProtectionToggle.Parent = Main
+ProtectionToggle.Parent = Content
 ProtectionToggle.Position = UDim2.fromScale(0.2, 0.42)
 ProtectionToggle.Size = UDim2.fromScale(0.6, 0.20)
 ProtectionToggle.Text = "Enable Protection"
@@ -155,3 +182,16 @@ end)
 
 -- ================= CORE READY =================
 print("✅ Core module loaded successfully")
+-- ================= SECTION HELPER =================
+function CreateSection(title)
+    local Section = Instance.new("TextLabel")
+    Section.Parent = Content
+    Section.Size = UDim2.fromScale(0.9, 0.06)
+    Section.BackgroundTransparency = 1
+    Section.Text = title
+    Section.Font = Enum.Font.GothamBold
+    Section.TextScaled = true
+    Section.TextColor3 = Color3.fromRGB(180, 180, 180)
+    Section.TextXAlignment = Enum.TextXAlignment.Left
+    return Section
+end
