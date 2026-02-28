@@ -1,26 +1,34 @@
--- Universal Protection Framework Loader
--- Platform: Android / Delta
--- Version: 0.9.x (Dev)
+-- loader.lua
+-- Carga los módulos en el orden correcto: core -> protection -> smart -> recovery
 
-local HttpService = game:GetService("HttpService")
+local base = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
 
-local BASE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
-
-local MODULES = {
+local modules = {
     "module_core.lua",
     "module_protection.lua",
     "module_smart.lua",
     "module_recovery.lua"
 }
 
-for i, moduleName in ipairs(MODULES) do
-    local url = BASE_URL .. moduleName
-    local source = game:HttpGet(url)
-    local fn, err = loadstring(source)
-    if not fn then
-        warn("❌ Error loading module:", moduleName, err)
+for _, m in ipairs(modules) do
+    local url = base .. m
+    local ok, src = pcall(function() return game:HttpGet(url) end)
+    if not ok then
+        warn("Failed to download module:", m, src)
         break
     end
-    print("✅ Loaded:", moduleName)
-    fn()
+
+    local fn, err = loadstring(src)
+    if not fn then
+        warn("Failed to load module:", m, err)
+        break
+    end
+
+    local success, err2 = pcall(fn)
+    if not success then
+        warn("Error running module:", m, err2)
+        break
+    end
+
+    print("✅ Loaded:", m)
 end
