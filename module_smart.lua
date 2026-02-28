@@ -5,19 +5,23 @@
 -- Version: 0.9.x (Client Safe)
 -- =========================================================
 
--- ================= SAFETY CHECK =================
-if not ScriptRunning or not RootPart or not Character then
-    warn("❌ Core not ready. Smart module aborted.")
-    return
-end
+-- Espera a que Core esté listo
+repeat task.wait() until CoreReady
 
--- ================= GLOBAL STATE =================
+-- Espera al Character
+repeat task.wait() until Character and Character:FindFirstChild("Humanoid") and Character:FindFirstChild("HumanoidRootPart")
+
+-- Sincroniza referencias
+Humanoid = Character:FindFirstChild("Humanoid")
+RootPart = Character:FindFirstChild("HumanoidRootPart")
+
+-- GLOBAL STATE
 SmartMode = SmartMode or "SAFE" -- SAFE / PVP
 FlingDetected = false
 FlingEvents = FlingEvents or 0
 DangerousPlayers = DangerousPlayers or {}
 
--- ================= CLIENT-SAFE NO COLLISION =================
+-- CLIENT-SAFE NO COLLISION
 local function SetPlayerCollision(char, canCollide)
     for _, p in ipairs(char:GetDescendants()) do
         if p:IsA("BasePart") then
@@ -26,10 +30,10 @@ local function SetPlayerCollision(char, canCollide)
     end
 end
 
--- ================= UI =================
-SmartLabel = Instance.new("TextLabel")
-SmartLabel.Parent = Main
-SmartLabel.Position = UDim2.fromScale(0.05, 0.64)
+-- UI (se agrega dentro del Content ya existente)
+local SmartLabel = Instance.new("TextLabel")
+SmartLabel.Parent = Content
+SmartLabel.Position = UDim2.fromScale(0, 0) -- UIListLayout manejará la posición
 SmartLabel.Size = UDim2.fromScale(0.9, 0.12)
 SmartLabel.BackgroundTransparency = 1
 SmartLabel.Font = Enum.Font.GothamBold
@@ -38,9 +42,8 @@ SmartLabel.TextColor3 = Color3.fromRGB(255, 180, 80)
 SmartLabel.Text = "Smart Protection: CLEAR"
 
 -- Mode Button
-ModeButton = Instance.new("TextButton")
-ModeButton.Parent = Main
-ModeButton.Position = UDim2.fromScale(0.05, 0.78)
+local ModeButton = Instance.new("TextButton")
+ModeButton.Parent = Content
 ModeButton.Size = UDim2.fromScale(0.42, 0.18)
 ModeButton.Text = "Mode: SAFE"
 ModeButton.Font = Enum.Font.GothamBold
@@ -54,10 +57,9 @@ ModeButton.MouseButton1Click:Connect(function()
     ModeButton.Text = "Mode: " .. SmartMode
 end)
 
--- ================= PANIC BUTTON =================
-PanicButton = Instance.new("TextButton")
-PanicButton.Parent = Main
-PanicButton.Position = UDim2.fromScale(0.53, 0.78)
+-- Panic Button
+local PanicButton = Instance.new("TextButton")
+PanicButton.Parent = Content
 PanicButton.Size = UDim2.fromScale(0.42, 0.18)
 PanicButton.Text = "🚨 PANIC"
 PanicButton.Font = Enum.Font.GothamBold
@@ -67,7 +69,6 @@ PanicButton.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", PanicButton).CornerRadius = UDim.new(0, 12)
 
 local PanicCooldown = false
-
 PanicButton.MouseButton1Click:Connect(function()
     if PanicCooldown then return end
     PanicCooldown = true
@@ -77,11 +78,13 @@ PanicButton.MouseButton1Click:Connect(function()
     ModeButton.Text = "Mode: SAFE"
 
     if LastSafePosition and RootPart then
-        RootPart.CFrame = LastSafePosition
+        pcall(function() RootPart.CFrame = LastSafePosition end)
     end
 
-    RootPart.AssemblyLinearVelocity = Vector3.zero
-    RootPart.AssemblyAngularVelocity = Vector3.zero
+    pcall(function()
+        RootPart.AssemblyLinearVelocity = Vector3.zero
+        RootPart.AssemblyAngularVelocity = Vector3.zero
+    end)
 
     PanicButton.Text = "PANIC ACTIVE"
     PanicButton.BackgroundColor3 = Color3.fromRGB(120,120,120)
@@ -93,36 +96,35 @@ PanicButton.MouseButton1Click:Connect(function()
     end)
 end)
 
--- ================= FLING DETECTION =================
+-- FLING DETECTION
 local function MarkDanger(plr)
     DangerousPlayers[plr] = tick()
     FlingDetected = true
-    FlingEvents += 1
+    FlingEvents = (FlingEvents or 0) + 1
 end
 
 local function CleanupDanger()
     for plr, t in pairs(DangerousPlayers) do
         if tick() - t > 3 then
             if plr.Character then
-                SetPlayerCollision(plr.Character, true) -- restore collision
+                pcall(function() SetPlayerCollision(plr.Character, true) end)
             end
             DangerousPlayers[plr] = nil
         end
     end
-
     if next(DangerousPlayers) == nil then
         FlingDetected = false
     end
 end
 
--- ================= SMART LOOP =================
+-- SMART LOOP
 Connections.SmartHeartbeat = RunService.Heartbeat:Connect(function()
     if not ScriptRunning or not ProtectionEnabled then return end
 
     CleanupDanger()
 
     for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= Players.LocalPlayer and plr.Character then
+        if plr ~= LocalPlayer and plr.Character then
             local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
             if hrp then
                 local vel = hrp.AssemblyLinearVelocity.Magnitude
@@ -138,14 +140,14 @@ Connections.SmartHeartbeat = RunService.Heartbeat:Connect(function()
                 end
 
                 if DangerousPlayers[plr] then
-                    SetPlayerCollision(plr.Character, false) -- no collision with flinger
+                    pcall(function() SetPlayerCollision(plr.Character, false) end)
                 end
             end
         end
     end
 
     SmartLabel.Text = FlingDetected
-        and ("⚠ Fling Detected | Events: " .. FlingEvents)
+        and ("⚠ Fling Detected | Events: " .. (FlingEvents or 0))
         or "Smart Protection: CLEAR"
 end)
 
