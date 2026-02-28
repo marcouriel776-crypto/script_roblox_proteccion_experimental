@@ -5,29 +5,32 @@
 -- Version: 0.9.x (Stable)
 -- =========================================================
 
--- ================= SAFETY CHECK =================
-if not ScriptRunning then
-    warn("❌ Core not loaded. Protection aborted.")
-    return
-end
+-- Espera a que Core esté listo
+repeat task.wait() until CoreReady
 
--- ================= STATE =================
+-- Espera a que Character/Humanoid/RootPart existan
+repeat task.wait() until Character and Character:FindFirstChild("Humanoid") and Character:FindFirstChild("HumanoidRootPart")
+
+-- Asegura referencias globales (core las creó)
+Humanoid = Character:FindFirstChild("Humanoid")
+RootPart = Character:FindFirstChild("HumanoidRootPart")
+
+-- STATE
 BlockedEvents = BlockedEvents or 0
 LastSafePosition = LastSafePosition or nil
 
--- ================= SETTINGS =================
+-- SETTINGS
 local MAX_DISTANCE_PER_FRAME = 35      -- studs
-local MAX_LINEAR_VELOCITY = 120         -- studs/sec
+local MAX_LINEAR_VELOCITY = 120        -- studs/sec
 
--- ================= INTERNAL =================
-local lastPosition = nil
-
--- ================= HELPERS =================
+-- HELPERS
 local function ClearForces(part)
     if not part then return end
 
-    part.AssemblyLinearVelocity = Vector3.zero
-    part.AssemblyAngularVelocity = Vector3.zero
+    pcall(function()
+        part.AssemblyLinearVelocity = Vector3.zero
+        part.AssemblyAngularVelocity = Vector3.zero
+    end)
 
     for _, v in ipairs(part:GetChildren()) do
         if v:IsA("BodyVelocity")
@@ -35,40 +38,37 @@ local function ClearForces(part)
         or v:IsA("BodyGyro")
         or v:IsA("LinearVelocity")
         or v:IsA("AngularVelocity") then
-            v:Destroy()
+            pcall(function() v:Destroy() end)
         end
     end
 end
 
--- ================= MAIN PROTECTION LOOP =================
+-- MAIN PROTECTION LOOP
+local lastPosition = nil
 Connections.ProtectionHeartbeat = RunService.Heartbeat:Connect(function()
     if not ScriptRunning then return end
     if not ProtectionEnabled then return end
     if not RootPart or not Humanoid then return end
 
-    -- Initialize
     if not lastPosition then
         lastPosition = RootPart.Position
         return
     end
 
-    -- Distance jump check (anti-launch / anti-fling)
     local dist = (RootPart.Position - lastPosition).Magnitude
     if dist > MAX_DISTANCE_PER_FRAME then
-        RootPart.CFrame = CFrame.new(lastPosition)
+        -- rollback
+        pcall(function() RootPart.CFrame = CFrame.new(lastPosition) end)
         ClearForces(RootPart)
-
-        BlockedEvents += 1
+        BlockedEvents = (BlockedEvents or 0) + 1
     end
 
-    -- Velocity check
     local vel = RootPart.AssemblyLinearVelocity.Magnitude
     if vel > MAX_LINEAR_VELOCITY then
         ClearForces(RootPart)
-        BlockedEvents += 1
+        BlockedEvents = (BlockedEvents or 0) + 1
     end
 
-    -- Save safe position (grounded & calm)
     if Humanoid.FloorMaterial ~= Enum.Material.Air and vel < 10 then
         LastSafePosition = RootPart.CFrame
     end
