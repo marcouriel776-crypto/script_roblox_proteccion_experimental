@@ -2,39 +2,40 @@
 -- MODULE CORE
 -- Universal Protection Framework
 -- Platform: Android / Delta
--- Version: 0.9.x UI Pro
+-- Version: 0.9.x UI Pro (CoreReady)
 -- =========================================================
 
--- ================= SERVICES =================
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-local UserInputService = game:GetService("UserInputService")
+-- SERVICES
+Players = game:GetService("Players")
+RunService = game:GetService("RunService")
+CoreGui = game:GetService("CoreGui")
+UserInputService = game:GetService("UserInputService")
 
-local LocalPlayer = Players.LocalPlayer
+LocalPlayer = Players.LocalPlayer
 
--- ================= GLOBAL STATE =================
-local ScriptRunning = true
-local ProtectionEnabled = false
-local Connections = {}
+-- GLOBAL STATE (intencionalmente global para que otros módulos lo usen)
+ScriptRunning = true
+ProtectionEnabled = false
+Connections = {}
 
-local Character, Humanoid, RootPart
+Character = nil
+Humanoid = nil
+RootPart = nil
 
--- ================= CHARACTER HANDLER =================
+-- CHARACTER HANDLER
 local function UpdateCharacter(char)
     Character = char
-    Humanoid = char:WaitForChild("Humanoid", 5)
-    RootPart = char:WaitForChild("HumanoidRootPart", 5)
+    Humanoid = char:FindFirstChild("Humanoid") or char:WaitForChild("Humanoid", 5)
+    RootPart = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart", 5)
 end
 
 if LocalPlayer.Character then
     UpdateCharacter(LocalPlayer.Character)
 end
-
 Connections.CharacterAdded = LocalPlayer.CharacterAdded:Connect(UpdateCharacter)
 
--- ================= SHUTDOWN =================
-local function ShutdownFramework()
+-- SHUTDOWN
+function ShutdownFramework()
     ScriptRunning = false
     ProtectionEnabled = false
     for _, c in pairs(Connections) do
@@ -45,7 +46,7 @@ local function ShutdownFramework()
     end
 end
 
--- ================= UI CREATION =================
+-- UI CREATION (reemplaza si existe)
 if CoreGui:FindFirstChild("ProtectionUI") then
     CoreGui.ProtectionUI:Destroy()
 end
@@ -55,8 +56,8 @@ ScreenGui.Name = "ProtectionUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
--- ================= MAIN WINDOW =================
-local Main = Instance.new("Frame")
+-- MAIN WINDOW
+Main = Instance.new("Frame")
 Main.Parent = ScreenGui
 Main.Size = UDim2.fromScale(0.55, 0.35)
 Main.Position = UDim2.fromScale(0.225, 0.33)
@@ -74,8 +75,8 @@ MainGradient.Color = ColorSequence.new{
 }
 MainGradient.Rotation = 90
 
--- ================= HEADER =================
-local Header = Instance.new("Frame")
+-- HEADER
+Header = Instance.new("Frame")
 Header.Parent = Main
 Header.Size = UDim2.fromScale(1, 0.18)
 Header.BackgroundTransparency = 0
@@ -88,7 +89,7 @@ HeaderGradient.Color = ColorSequence.new{
     ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 40, 90))
 }
 
-local TitleLabel = Instance.new("TextLabel")
+TitleLabel = Instance.new("TextLabel")
 TitleLabel.Parent = Header
 TitleLabel.Size = UDim2.fromScale(1, 1)
 TitleLabel.BackgroundTransparency = 1
@@ -97,8 +98,8 @@ TitleLabel.Font = Enum.Font.GothamBold
 TitleLabel.TextScaled = true
 TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
 
--- ================= SCROLL CONTENT =================
-local Content = Instance.new("ScrollingFrame")
+-- SCROLL CONTENT
+Content = Instance.new("ScrollingFrame")
 Content.Parent = Main
 Content.Position = UDim2.fromScale(0, 0.18)
 Content.Size = UDim2.fromScale(1, 0.82)
@@ -112,7 +113,7 @@ UIList.Parent = Content
 UIList.Padding = UDim.new(0, 12)
 UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- ================= SECTION HELPER =================
+-- SECTION HELPER
 local function CreateSection(title)
     local Holder = Instance.new("Frame")
     Holder.Parent = Content
@@ -139,11 +140,10 @@ local function CreateSection(title)
     return Holder
 end
 
--- ================= FIRST SECTION =================
+-- INITIAL SECTIONS & BASE UI ELEMENTS
 CreateSection("🛡 PROTECTION")
 
--- ================= INFO LABEL =================
-local InfoLabel = Instance.new("TextLabel")
+InfoLabel = Instance.new("TextLabel")
 InfoLabel.Parent = Content
 InfoLabel.Size = UDim2.fromScale(0.9, 0.12)
 InfoLabel.BackgroundTransparency = 1
@@ -152,8 +152,7 @@ InfoLabel.TextScaled = true
 InfoLabel.TextColor3 = Color3.fromRGB(200, 200, 220)
 InfoLabel.Text = "FPS: -- | Status: OFF"
 
--- ================= PROTECTION TOGGLE =================
-local ProtectionToggle = Instance.new("TextButton")
+ProtectionToggle = Instance.new("TextButton")
 ProtectionToggle.Parent = Content
 ProtectionToggle.Size = UDim2.fromScale(0.6, 0.18)
 ProtectionToggle.Text = "Enable Protection"
@@ -168,8 +167,8 @@ ProtectionToggle.MouseButton1Click:Connect(function()
     ProtectionToggle.Text = ProtectionEnabled and "Disable Protection" or "Enable Protection"
 end)
 
--- ================= CLOSE & MINIMIZE =================
-local CloseButton = Instance.new("TextButton")
+-- CLOSE & MINIMIZE
+CloseButton = Instance.new("TextButton")
 CloseButton.Parent = Main
 CloseButton.Size = UDim2.fromScale(0.12, 0.18)
 CloseButton.Position = UDim2.fromScale(0.88, 0)
@@ -181,7 +180,7 @@ CloseButton.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", CloseButton).CornerRadius = UDim.new(0, 12)
 CloseButton.MouseButton1Click:Connect(ShutdownFramework)
 
-local MinimizeButton = Instance.new("TextButton")
+MinimizeButton = Instance.new("TextButton")
 MinimizeButton.Parent = Main
 MinimizeButton.Size = UDim2.fromScale(0.12, 0.18)
 MinimizeButton.Position = UDim2.fromScale(0.76, 0)
@@ -192,8 +191,8 @@ MinimizeButton.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
 MinimizeButton.TextColor3 = Color3.new(1, 1, 1)
 Instance.new("UICorner", MinimizeButton).CornerRadius = UDim.new(0, 12)
 
--- ================= FLOATING BUTTON 🛡 =================
-local FloatingButton = Instance.new("TextButton")
+-- FLOATING BUTTON
+FloatingButton = Instance.new("TextButton")
 FloatingButton.Parent = ScreenGui
 FloatingButton.Size = UDim2.fromScale(0.12, 0.12)
 FloatingButton.Position = UDim2.fromScale(0.85, 0.65)
@@ -215,8 +214,8 @@ FloatGradient.Color = ColorSequence.new{
 }
 FloatGradient.Rotation = 45
 
--- ================= OPEN / CLOSE UI =================
-local UIVisible = true
+-- OPEN / CLOSE UI
+UIVisible = true
 local function ToggleUI()
     UIVisible = not UIVisible
     Main.Visible = UIVisible
@@ -226,11 +225,13 @@ end
 FloatingButton.MouseButton1Click:Connect(ToggleUI)
 MinimizeButton.MouseButton1Click:Connect(ToggleUI)
 
--- ================= FPS MONITOR =================
+-- FPS MONITOR
 Connections.FPS = RunService.Heartbeat:Connect(function(dt)
     if not ScriptRunning then return end
     local fps = math.floor(1 / dt)
     InfoLabel.Text = "FPS: " .. fps .. " | Status: " .. (ProtectionEnabled and "ACTIVE" or "OFF")
 end)
 
-print("✅ Core module loaded successfully - UI Pro")
+-- Indica que Core terminó de inicializar y las variables UI/globales están listas
+CoreReady = true
+print("✅ Core module fully ready - UI Pro")
