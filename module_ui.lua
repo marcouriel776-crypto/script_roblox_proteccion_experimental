@@ -1,7 +1,4 @@
--- module_ui.lua
--- UI helpers: style, sections, floating button polish, small animations
--- Loads AFTER module_core.lua (expects CoreReady + Content + Main already exist)
-
+-- module_ui.lua (robust)
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
@@ -35,7 +32,7 @@ local function safeTween(obj, props, time, style, dir)
 end
 
 -- StyleButton: consistent look
-function StyleButton(btn, kind)
+local function StyleButton(btn, kind)
     if not btn or not btn:IsA("GuiObject") then return end
     local colors = {
         primary = Color3.fromRGB(70,120,220),
@@ -53,7 +50,7 @@ function StyleButton(btn, kind)
 end
 
 -- CreateSection: nice title + divider
-function CreateSection(title)
+local function CreateSection(title)
     local Holder = Instance.new("Frame")
     Holder.Name = "Section_" .. tostring(title)
     Holder.Parent = Content
@@ -80,14 +77,27 @@ function CreateSection(title)
     return Holder, Label
 end
 
--- Floating button polish: add hover scale + quick fade
-local Floating = ScreenGui:FindFirstChildOfClass("TextButton")
+-- Floating button polish: prefer named FloatingButton, fallback to first TextButton if needed
+local Floating = ScreenGui:FindFirstChild("FloatingButton") or ScreenGui:FindFirstChildOfClass("TextButton")
+
+-- define no-op fade functions so API is always available
+local function FadeOutMain()
+    Main.Visible = false
+end
+local function FadeInMain()
+    Main.Visible = true
+end
+
 if Floating then
     -- hover scale (touch devices ignore hover but it's safe)
-    Floating:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() end)
-    Floating.MouseEnter:Connect(function() safeTween(Floating, {Size = UDim2.fromScale(0.135,0.135)}, 0.12) end)
-    Floating.MouseLeave:Connect(function() safeTween(Floating, {Size = UDim2.fromScale(0.12,0.12)}, 0.12) end)
-    -- show tiny shadow by duplicating a frame behind (if not present)
+    pcall(function()
+        Floating:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() end)
+    end)
+    pcall(function()
+        Floating.MouseEnter:Connect(function() safeTween(Floating, {Size = UDim2.fromScale(0.135,0.135)}, 0.12) end)
+        Floating.MouseLeave:Connect(function() safeTween(Floating, {Size = UDim2.fromScale(0.12,0.12)}, 0.12) end)
+    end)
+    -- tiny shadow
     if not Floating:FindFirstChild("Shadow") then
         local sh = Instance.new("Frame")
         sh.Name = "Shadow"
@@ -95,23 +105,27 @@ if Floating then
         sh.Position = UDim2.fromScale(-0.02,-0.02)
         sh.BackgroundTransparency = 0.6
         sh.BackgroundColor3 = Color3.fromRGB(0,0,0)
-        sh.ZIndex = Floating.ZIndex - 1
+        sh.ZIndex = math.max(0, (Floating.ZIndex or 0) - 1)
         sh.Parent = Floating
-        sh.Rotation = 0
         Instance.new("UICorner", sh).CornerRadius = UDim.new(1,0)
     end
-    -- quick fade in/out helpers
+
+    -- better fade helpers using tween
     function FadeOutMain()
-        safeTween(Main, {Position = UDim2.fromScale(Main.Position.X.Scale, Main.Position.Y.Scale + 0.02), BackgroundTransparency = 1}, 0.18)
-        Main.Visible = false
+        pcall(function()
+            safeTween(Main, {Position = Main.Position + UDim2.fromScale(0,0.02), BackgroundTransparency = 1}, 0.18)
+            task.delay(0.18, function() Main.Visible = false end)
+        end)
     end
     function FadeInMain()
-        Main.Visible = true
-        safeTween(Main, {Position = UDim2.fromScale(Main.Position.X.Scale, Main.Position.Y.Scale - 0.02), BackgroundTransparency = 0}, 0.18)
+        pcall(function()
+            Main.Visible = true
+            safeTween(Main, {Position = Main.Position - UDim2.fromScale(0,0.02), BackgroundTransparency = 0}, 0.18)
+        end)
     end
 end
 
--- Try to restyle known core buttons if present
+-- Try to restyle known core buttons if present (non-fatal)
 pcall(function()
     local prot = Content:FindFirstChild("ProtectionToggle") or Content:FindFirstChildOfClass("TextButton")
     if prot then StyleButton(prot, "primary") end
