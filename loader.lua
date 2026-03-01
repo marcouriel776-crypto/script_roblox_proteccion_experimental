@@ -1,35 +1,37 @@
--- loader.lua (updated)
-local HttpService = game:GetService("HttpService")
+-- loader.lua (FINAL)
 local BASE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
 
 local MODULES = {
     "module_settings.lua",
     "module_core.lua",
     "module_ui.lua",
+    "module_utils.lua",
     "module_protection.lua",
     "module_smart.lua",
     "module_recovery.lua",
-    "module_utils.lua",
-    "module_audio.lua"
+    "module_audio.lua",
 }
 
-for i, moduleName in ipairs(MODULES) do
-    local url = BASE_URL .. moduleName
-    local source
-    local ok, err = pcall(function() source = game:HttpGet(url) end)
+for _, name in ipairs(MODULES) do
+    local src
+    local ok, err = pcall(function()
+        src = game:HttpGet(BASE_URL .. name)
+    end)
     if not ok then
-        warn("Failed to download:", moduleName, err)
+        warn("❌ Failed to download:", name, err)
         break
     end
-    local fn, loadErr = loadstring(source)
+
+    local fn, loadErr = loadstring(src)
     if not fn then
-        warn("❌ Error loading module:", moduleName, loadErr)
+        warn("❌ Failed to load:", name, loadErr)
         break
     end
-    print("✅ Loaded:", moduleName)
-    local success, runErr = pcall(fn)
-    if not success then
-        warn("Error running module:", moduleName, runErr)
+
+    print("✅ Loaded:", name)
+    local ran, runErr = pcall(fn)
+    if not ran then
+        warn("❌ Error running:", name, runErr)
         break
     end
 end
