@@ -1,38 +1,35 @@
--- loader.lua
--- Carga los módulos en el orden correcto: core -> protection -> smart -> recovery
+-- loader.lua (updated)
+local HttpService = game:GetService("HttpService")
+local BASE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
 
-local base = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
-
-local modules = {
-  "module_settings.lua",   -- si existe
-  "module_core.lua",
-  "module_ui.lua",
-  "module_protection.lua",
-  "module_smart.lua",
-  "module_recovery.lua",
-  "module_utils.lua",
-  "module_audio.lua",
+local MODULES = {
+    "module_settings.lua",
+    "module_core.lua",
+    "module_ui.lua",
+    "module_protection.lua",
+    "module_smart.lua",
+    "module_recovery.lua",
+    "module_utils.lua",
+    "module_audio.lua"
 }
 
-for _, m in ipairs(modules) do
-    local url = base .. m
-    local ok, src = pcall(function() return game:HttpGet(url) end)
+for i, moduleName in ipairs(MODULES) do
+    local url = BASE_URL .. moduleName
+    local source
+    local ok, err = pcall(function() source = game:HttpGet(url) end)
     if not ok then
-        warn("Failed to download module:", m, src)
+        warn("Failed to download:", moduleName, err)
         break
     end
-
-    local fn, err = loadstring(src)
+    local fn, loadErr = loadstring(source)
     if not fn then
-        warn("Failed to load module:", m, err)
+        warn("❌ Error loading module:", moduleName, loadErr)
         break
     end
-
-    local success, err2 = pcall(fn)
+    print("✅ Loaded:", moduleName)
+    local success, runErr = pcall(fn)
     if not success then
-        warn("Error running module:", m, err2)
+        warn("Error running module:", moduleName, runErr)
         break
     end
-
-    print("✅ Loaded:", m)
 end
