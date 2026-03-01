@@ -1,8 +1,7 @@
--- module_audio.lua (fix pcall usage)
+-- module_audio.lua
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local HttpService = game:GetService("HttpService")
 
 repeat task.wait() until CoreReady
 repeat task.wait() until LocalPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -35,11 +34,7 @@ local function applyShieldToCharacter(plr, shieldOn)
     if not plr or not plr.Character then return end
     for _, s in ipairs(plr.Character:GetDescendants()) do
         if s:IsA("Sound") then
-            if shieldOn then
-                saveOriginal(s); setVolume(s, level)
-            else
-                restoreSound(s)
-            end
+            if shieldOn then saveOriginal(s); setVolume(s, level) else restoreSound(s) end
         end
     end
 end
