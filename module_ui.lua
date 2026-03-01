@@ -1,11 +1,10 @@
--- module_ui.lua (robust)
+-- module_ui.lua
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- wait for core
 repeat task.wait() until CoreReady
 local ok, ScreenGui = pcall(function() return CoreGui:FindFirstChild("ProtectionUI") end)
 if not ok or not ScreenGui then
@@ -13,15 +12,29 @@ if not ok or not ScreenGui then
     return
 end
 
--- find Main and Content
-local Main = ScreenGui:FindFirstChildOfClass("Frame")
-local Content = ScreenGui:FindFirstChildWhichIsA("ScrollingFrame") or ScreenGui:FindFirstChild("Content")
+local Main = ScreenGui:FindFirstChild("Main") or ScreenGui:FindFirstChildOfClass("Frame")
+local Content
+if Main then
+    Content = Main:FindFirstChild("Content") or Main:FindFirstChildWhichIsA("ScrollingFrame")
+end
+if not Content then
+    Content = ScreenGui:FindFirstChildWhichIsA("ScrollingFrame") or ScreenGui:FindFirstChild("Content")
+end
+
 if not Main or not Content then
     warn("module_ui: Main or Content not detected (structure mismatch).")
+    pcall(function()
+        print("module_ui: ScreenGui children:")
+        for i, c in ipairs(ScreenGui:GetChildren()) do
+            print(" -", i, c.Name, c.ClassName)
+            for j, cc in ipairs(c:GetChildren()) do
+                print("    ->", j, cc.Name, cc.ClassName)
+            end
+        end
+    end)
     return
 end
 
--- tiny helpers
 local function safeTween(obj, props, time, style, dir)
     local suc, err = pcall(function()
         local info = TweenInfo.new(time or 0.18, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out)
@@ -31,7 +44,6 @@ local function safeTween(obj, props, time, style, dir)
     if not suc then warn("safeTween failed:", err) end
 end
 
--- StyleButton: consistent look
 local function StyleButton(btn, kind)
     if not btn or not btn:IsA("GuiObject") then return end
     local colors = {
@@ -49,7 +61,6 @@ local function StyleButton(btn, kind)
     end)
 end
 
--- CreateSection: nice title + divider
 local function CreateSection(title)
     local Holder = Instance.new("Frame")
     Holder.Name = "Section_" .. tostring(title)
@@ -77,10 +88,8 @@ local function CreateSection(title)
     return Holder, Label
 end
 
--- Floating button polish: prefer named FloatingButton, fallback to first TextButton if needed
 local Floating = ScreenGui:FindFirstChild("FloatingButton") or ScreenGui:FindFirstChildOfClass("TextButton")
 
--- define no-op fade functions so API is always available
 local function FadeOutMain()
     Main.Visible = false
 end
@@ -89,7 +98,6 @@ local function FadeInMain()
 end
 
 if Floating then
-    -- hover scale (touch devices ignore hover but it's safe)
     pcall(function()
         Floating:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() end)
     end)
@@ -97,7 +105,6 @@ if Floating then
         Floating.MouseEnter:Connect(function() safeTween(Floating, {Size = UDim2.fromScale(0.135,0.135)}, 0.12) end)
         Floating.MouseLeave:Connect(function() safeTween(Floating, {Size = UDim2.fromScale(0.12,0.12)}, 0.12) end)
     end)
-    -- tiny shadow
     if not Floating:FindFirstChild("Shadow") then
         local sh = Instance.new("Frame")
         sh.Name = "Shadow"
@@ -110,7 +117,6 @@ if Floating then
         Instance.new("UICorner", sh).CornerRadius = UDim.new(1,0)
     end
 
-    -- better fade helpers using tween
     function FadeOutMain()
         pcall(function()
             safeTween(Main, {Position = Main.Position + UDim2.fromScale(0,0.02), BackgroundTransparency = 1}, 0.18)
@@ -125,7 +131,6 @@ if Floating then
     end
 end
 
--- Try to restyle known core buttons if present (non-fatal)
 pcall(function()
     local prot = Content:FindFirstChild("ProtectionToggle") or Content:FindFirstChildOfClass("TextButton")
     if prot then StyleButton(prot, "primary") end
@@ -135,7 +140,6 @@ pcall(function()
     if minb then StyleButton(minb, "neutral") end
 end)
 
--- Expose API to other modules
 _G.UI_CreateSection = CreateSection
 _G.UI_StyleButton = StyleButton
 _G.UI_FadeInMain = FadeInMain
