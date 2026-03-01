@@ -1,8 +1,4 @@
--- module_ui_theme.lua
--- Theme & Settings overlay (Sirius-like cards, animations)
--- Extiende la UI existente creada por module_core.lua / module_ui.lua
--- Load AFTER CoreReady and module_ui.lua
-
+-- module_ui_theme.lua (fix: cards are TextButton so MouseButton1Click exists)
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
@@ -23,7 +19,7 @@ if not Main or not Content or not Header then
     return
 end
 
--- Small helpers
+-- Helpers
 local function tween(obj, props, time, style, dir)
     time = time or 0.22
     style = style or Enum.EasingStyle.Quad
@@ -44,7 +40,7 @@ local function makeGradient(frame, color1, color2, rotation)
     return grad
 end
 
--- Add Settings button to header (if not exists)
+-- Settings button in header
 local SettingsBtn = Header:FindFirstChild("SettingsButton")
 if not SettingsBtn then
     SettingsBtn = Instance.new("TextButton")
@@ -64,16 +60,18 @@ if not SettingsBtn then
     stroke.Thickness = 1
     stroke.Transparency = 0.7
     stroke.Color = Color3.fromRGB(255,255,255)
-    -- subtle gradient
     makeGradient(SettingsBtn, Color3.fromRGB(36,46,80), Color3.fromRGB(24,26,35), 90)
 end
 
--- Create overlay container (right panel)
-local Overlay = Instance.new("Frame")
+-- Overlay (right panel)
+local Overlay = ScreenGui:FindFirstChild("SettingsOverlay")
+if Overlay then Overlay:Destroy() end
+
+Overlay = Instance.new("Frame")
 Overlay.Name = "SettingsOverlay"
 Overlay.Parent = ScreenGui
-Overlay.Size = UDim2.fromScale(0.44, 0.72) -- width, height relative to screen
-Overlay.Position = UDim2.fromScale(1.0, 0.14) -- start off-screen (to the right)
+Overlay.Size = UDim2.fromScale(0.44, 0.72)
+Overlay.Position = UDim2.fromScale(1.0, 0.14)
 Overlay.AnchorPoint = Vector2.new(1, 0)
 Overlay.BackgroundTransparency = 0
 Overlay.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
@@ -113,7 +111,7 @@ CloseOverlayBtn.BackgroundTransparency = 0
 CloseOverlayBtn.BackgroundColor3 = Color3.fromRGB(40,40,50)
 Instance.new("UICorner", CloseOverlayBtn).CornerRadius = UDim.new(0,10)
 
--- grid container for cards
+-- grid container
 local Grid = Instance.new("Frame")
 Grid.Parent = Overlay
 Grid.Size = UDim2.fromScale(0.96, 0.78)
@@ -122,24 +120,26 @@ Grid.BackgroundTransparency = 1
 
 local GridLayout = Instance.new("UIGridLayout")
 GridLayout.Parent = Grid
-GridLayout.CellSize = UDim2.new(0.32, 0, 0.38, 0) -- 3 columns wide-ish
+GridLayout.CellSize = UDim2.new(0.32, 0, 0.38, 0)
 GridLayout.CellPadding = UDim2.new(0.03,0,0.03,0)
 GridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 GridLayout.FillDirection = Enum.FillDirection.Horizontal
 GridLayout.FillDirectionMaxCells = 3
 
--- card factory
+-- card factory (TextButton now)
 local function createCard(title, col1, col2, id)
-    local card = Instance.new("Frame")
+    local card = Instance.new("TextButton")
     card.Name = "Card_" .. id
     card.Size = UDim2.fromScale(1,1)
     card.BackgroundColor3 = Color3.fromRGB(18,18,20)
     card.BorderSizePixel = 0
     card.Parent = Grid
+    card.AutoButtonColor = true
+    card.Text = "" -- no visible text, we'll add label separately
     Instance.new("UICorner", card).CornerRadius = UDim.new(0,14)
-    local grad = makeGradient(card, col1, col2, 90)
-    grad.Rotation = 180
-    -- inner content
+    -- gradient
+    makeGradient(card, col1, col2, 180)
+    -- label (on top)
     local label = Instance.new("TextLabel")
     label.Parent = card
     label.Size = UDim2.fromScale(1, 0.35)
@@ -151,22 +151,21 @@ local function createCard(title, col1, col2, id)
     label.TextColor3 = Color3.fromRGB(240,240,240)
     label.TextStrokeTransparency = 0.9
     label.TextXAlignment = Enum.TextXAlignment.Center
-    -- subtle inner glow (UIStroke)
+    -- subtle stroke
     local stroke = Instance.new("UIStroke", card)
     stroke.Thickness = 1
     stroke.Transparency = 0.8
     stroke.Color = Color3.fromRGB(255,255,255)
-    -- clickable behavior
-    card.Active = true
-    card.Selectable = true
+    -- hover effects
     card.MouseEnter:Connect(function()
-        tween(card, {Size = UDim2.fromScale(1.02,1.02)}, 0.14)
+        pcall(function() tween(card, {Size = UDim2.fromScale(1.02,1.02)}, 0.14) end)
     end)
     card.MouseLeave:Connect(function()
-        tween(card, {Size = UDim2.fromScale(1,1)}, 0.12)
+        pcall(function() tween(card, {Size = UDim2.fromScale(1,1)}, 0.12) end)
     end)
-    local function onClick()
-        -- open tab content area (simple replacement content for now)
+    -- click handler (works because TextButton)
+    card.MouseButton1Click:Connect(function()
+        -- remove old tab content
         if Overlay:FindFirstChild("TabContent") then Overlay.TabContent:Destroy() end
         local tab = Instance.new("Frame")
         tab.Name = "TabContent"
@@ -176,7 +175,6 @@ local function createCard(title, col1, col2, id)
         tab.BackgroundTransparency = 0
         tab.BackgroundColor3 = Color3.fromRGB(12,12,14)
         Instance.new("UICorner", tab).CornerRadius = UDim.new(0,12)
-        -- title
         local tlabel = Instance.new("TextLabel")
         tlabel.Parent = tab
         tlabel.Size = UDim2.fromScale(0.9, 0.22)
@@ -186,7 +184,6 @@ local function createCard(title, col1, col2, id)
         tlabel.Font = Enum.Font.GothamBold
         tlabel.TextScaled = true
         tlabel.TextColor3 = Color3.fromRGB(230,230,230)
-        -- placeholder area
         local ph = Instance.new("TextLabel")
         ph.Parent = tab
         ph.Size = UDim2.fromScale(0.9, 0.6)
@@ -197,22 +194,20 @@ local function createCard(title, col1, col2, id)
         ph.TextScaled = true
         ph.TextColor3 = Color3.fromRGB(200,200,210)
         ph.TextWrapped = true
-        -- animate tab in
         tab.Position = UDim2.fromScale(1.05, 0.55)
         tween(tab, {Position = UDim2.fromScale(0.025, 0.55)}, 0.28)
-    end
-    card.MouseButton1Click:Connect(onClick)
+    end)
     return card
 end
 
--- create the cards (colors chosen visually)
+-- create cards
 createCard("General", Color3.fromRGB(16,54,110), Color3.fromRGB(34,89,145), "general")
 createCard("Keybinds", Color3.fromRGB(14,68,56), Color3.fromRGB(28,110,98), "keybinds")
 createCard("Performance", Color3.fromRGB(110,50,20), Color3.fromRGB(170,80,30), "performance")
 createCard("Detections", Color3.fromRGB(120,20,20), Color3.fromRGB(180,40,40), "detections")
 createCard("Logging", Color3.fromRGB(120,100,20), Color3.fromRGB(200,160,30), "logging")
 
--- open/close behavior
+-- open/close overlay
 local overlayOpen = false
 local function openOverlay()
     if overlayOpen then return end
@@ -220,7 +215,6 @@ local function openOverlay()
     Overlay.Visible = true
     Overlay.Position = UDim2.fromScale(1.05, 0.14)
     tween(Overlay, {Position = UDim2.fromScale(0.94, 0.14)}, 0.32)
-    -- slightly dim main
     tween(Main, {BackgroundTransparency = 0.12}, 0.32)
 end
 local function closeOverlay()
@@ -237,7 +231,6 @@ SettingsBtn.MouseButton1Click:Connect(function()
 end)
 CloseOverlayBtn.MouseButton1Click:Connect(closeOverlay)
 
--- keyboard close (Esc)
 local uis = game:GetService("UserInputService")
 uis.InputBegan:Connect(function(input, processed)
     if processed then return end
