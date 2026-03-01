@@ -1,22 +1,16 @@
--- module_audio.lua
--- Spatial audio shield: attenúa sonidos localmente según radio y nivel
--- Cargar después de Core & Settings (CoreReady)
-
+-- module_audio.lua (fix pcall usage)
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local HttpService = game:GetService("HttpService")
 
--- wait for core
 repeat task.wait() until CoreReady
 repeat task.wait() until LocalPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
 
--- Config (prefer Settings from module_settings if exists)
 local enabled = (Settings and Settings.audio_shield_enabled) or false
 local radius = (Settings and Settings.audio_shield_radius) or 20
 local level = (Settings and Settings.audio_shield_level) or 0.25
 
--- track original volumes (weak refs)
 local OriginalVolumes = setmetatable({}, {__mode = "k"})
 
 local function saveOriginal(sound)
@@ -59,16 +53,14 @@ local function isPlayerNear(plr)
     return (a - b).Magnitude <= radius
 end
 
--- heartbeat: check players and apply/restore
-local PlayersCache = {}
 Connections.AudioShieldHeartbeat = RunService.Heartbeat:Connect(function()
     if not CoreReady then return end
     if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
 
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
-            local near = pcall(isPlayerNear, plr)
-            if near then
+            local ok, near = pcall(isPlayerNear, plr)
+            if ok and near then
                 applyShieldToCharacter(plr, enabled)
             else
                 applyShieldToCharacter(plr, false)
@@ -77,7 +69,6 @@ Connections.AudioShieldHeartbeat = RunService.Heartbeat:Connect(function()
     end
 end)
 
--- API
 function ToggleAudioShield(on)
     if on == nil then enabled = not enabled else enabled = on end
     Settings = Settings or {}
