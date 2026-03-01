@@ -5,6 +5,7 @@ local MODULES = {
     "module_settings.lua",
     "module_core.lua",
     "module_ui.lua",
+    "module_ui_theme.lua",
     "module_protection.lua",
     "module_smart.lua",
     "module_recovery.lua",
