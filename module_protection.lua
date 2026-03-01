@@ -1,4 +1,7 @@
--- MODULE PROTECTION
+-- module_protection.lua
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
 repeat task.wait() until CoreReady
 repeat task.wait() until Character and Character:FindFirstChild("Humanoid") and Character:FindFirstChild("HumanoidRootPart")
 
@@ -34,7 +37,7 @@ Connections.ProtectionHeartbeat = RunService.Heartbeat:Connect(function()
 
     local dist = (RootPart.Position - lastPosition).Magnitude
     if dist > MAX_DISTANCE_PER_FRAME then
-        pcall(function() RootPart.CFrame = CFrame.new(lastPosition) end)
+        pcall(function() SafeRollback(RootPart, CFrame.new(lastPosition)) end)
         ClearForces(RootPart)
         BlockedEvents = (BlockedEvents or 0) + 1
     end
