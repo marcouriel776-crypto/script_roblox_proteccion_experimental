@@ -1,19 +1,23 @@
--- MODULE RECOVERY
+-- module_recovery.lua
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
 repeat task.wait() until CoreReady
 repeat task.wait() until Character and Character:FindFirstChild("Humanoid") and Character:FindFirstChild("HumanoidRootPart")
 
 Humanoid = Character:FindFirstChild("Humanoid")
 RootPart = Character:FindFirstChild("HumanoidRootPart")
 
--- God Mode
-GodModeEnabled = GodModeEnabled or false
+GodModeEnabled = GodModeEnabled or (Settings and Settings.godmode_enabled) or false
+
 local GodToggle = Instance.new("TextButton")
 GodToggle.Parent = Content
 GodToggle.Size = UDim2.fromScale(0.6, 0.18)
-GodToggle.Text = "God Mode: OFF"
+GodToggle.Text = GodModeEnabled and "God Mode: ON" or "God Mode: OFF"
 GodToggle.Font = Enum.Font.GothamBold
 GodToggle.TextScaled = true
-GodToggle.BackgroundColor3 = Color3.fromRGB(120,60,60)
+GodToggle.BackgroundColor3 = GodModeEnabled and Color3.fromRGB(60,160,90) or Color3.fromRGB(120,60,60)
 GodToggle.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", GodToggle).CornerRadius = UDim.new(0,14)
 
@@ -21,6 +25,8 @@ GodToggle.MouseButton1Click:Connect(function()
     GodModeEnabled = not GodModeEnabled
     GodToggle.Text = GodModeEnabled and "God Mode: ON" or "God Mode: OFF"
     GodToggle.BackgroundColor3 = GodModeEnabled and Color3.fromRGB(60,160,90) or Color3.fromRGB(120,60,60)
+    Settings.godmode_enabled = GodModeEnabled
+    if type(SaveUPFSettings) == "function" then pcall(SaveUPFSettings) end
 end)
 
 Connections.GodHeartbeat = RunService.Heartbeat:Connect(function()
@@ -32,10 +38,9 @@ Connections.GodHeartbeat = RunService.Heartbeat:Connect(function()
     end)
 end)
 
--- SAFE RETURN + AutoReturn toggle + cooldown
 SafeAutoPoint = SafeAutoPoint or nil
-AutoReturnEnabled = (AutoReturnEnabled == nil) and true or AutoReturnEnabled
-ReturnCooldown = ReturnCooldown or 5
+AutoReturnEnabled = (AutoReturnEnabled == nil) and (Settings and Settings.auto_return_enabled) or AutoReturnEnabled
+ReturnCooldown = ReturnCooldown or (Settings and Settings.return_cooldown) or 5
 LastAutoReturn = LastAutoReturn or 0
 
 local AutoReturnToggle = Instance.new("TextButton")
@@ -52,9 +57,10 @@ AutoReturnToggle.MouseButton1Click:Connect(function()
     AutoReturnEnabled = not AutoReturnEnabled
     AutoReturnToggle.Text = AutoReturnEnabled and "Auto Return: ON" or "Auto Return: OFF"
     AutoReturnToggle.BackgroundColor3 = AutoReturnEnabled and Color3.fromRGB(60,160,90) or Color3.fromRGB(120,120,120)
+    Settings.auto_return_enabled = AutoReturnEnabled
+    if type(SaveUPFSettings) == "function" then pcall(SaveUPFSettings) end
 end)
 
--- Save safe point automatically when grounded & calm
 Connections.SafePointTracker = RunService.Heartbeat:Connect(function()
     if not RootPart or not Humanoid then return end
     local vel = 0
@@ -64,7 +70,6 @@ Connections.SafePointTracker = RunService.Heartbeat:Connect(function()
         SafeAutoPoint = RootPart.CFrame
     end
 
-    -- auto-return by void/height with cooldown and only if allowed
     if AutoReturnEnabled and SafeAutoPoint then
         local ok, y = pcall(function() return RootPart.Position.Y end)
         if ok and (y > 2000 or y < -500) and (tick() - LastAutoReturn > ReturnCooldown) then
@@ -74,7 +79,6 @@ Connections.SafePointTracker = RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Manual return UI (if you had it)
 local ReturnAutoBtn = Instance.new("TextButton")
 ReturnAutoBtn.Parent = Content
 ReturnAutoBtn.Size = UDim2.fromScale(0.6, 0.18)
@@ -86,12 +90,9 @@ ReturnAutoBtn.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", ReturnAutoBtn).CornerRadius = UDim.new(0,14)
 
 ReturnAutoBtn.MouseButton1Click:Connect(function()
-    if SafeAutoPoint and RootPart then
-        pcall(function() RootPart.CFrame = SafeAutoPoint end)
-    end
+    if SafeAutoPoint and RootPart then pcall(function() RootPart.CFrame = SafeAutoPoint end) end
 end)
 
--- Death recovery: teleport after respawn, but only once and respecting cooldown & AutoReturnEnabled
 if Humanoid then
     Connections.OnDeath = Humanoid.Died:Connect(function()
         local conn
@@ -108,7 +109,6 @@ if Humanoid then
     end)
 end
 
--- FREEZE & RECOVER (UI and logic)
 local FreezeLabel = Instance.new("TextLabel")
 FreezeLabel.Parent = Content
 FreezeLabel.Size = UDim2.fromScale(0.9, 0.12)
@@ -124,7 +124,7 @@ UnfreezeButton.Size = UDim2.fromScale(0.6, 0.18)
 UnfreezeButton.Text = "Unfreeze Player"
 UnfreezeButton.Font = Enum.Font.GothamBold
 UnfreezeButton.TextScaled = true
-UnfreezeButton.BackgroundColor3 = Color3.fromRGB(90, 140, 200)
+UnfreezeButton.BackgroundColor3 = Color3.fromRGB(90,140,200)
 UnfreezeButton.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", UnfreezeButton).CornerRadius = UDim.new(0,14)
 
@@ -171,7 +171,7 @@ end
 
 UnfreezeButton.MouseButton1Click:Connect(RecoverPlayer)
 
--- ADAPTIVE PERFORMANCE (respect manual override)
+-- Adaptive performance (respects manual override)
 PerfState = PerfState or "NORMAL"
 local LowFPS = 35
 local RecoverFPS = 45
@@ -191,7 +191,6 @@ local function SetPerf(state)
     PerfState = state
     PerfLabel.Text = "⚙ Performance: " .. state
     if state == "SAFE" then
-        -- only auto-enable protection if user didn't manually turn it off
         if ProtectionManualOverride ~= false then
             ProtectionEnabled = true
         end
@@ -202,7 +201,7 @@ end
 Connections.PerfHeartbeat = RunService.Heartbeat:Connect(function(dt)
     if not ScriptRunning then return end
     if tick() - LastSwitch < PerfCooldown then return end
-    local ok, fps = pcall(function() return math.floor(1 / dt) end)
+    local ok, fps = pcall(function() return math.floor(1 / math.max(dt,1e-6)) end)
     if not ok then return end
 
     if fps < LowFPS and PerfState ~= "SAFE" then
