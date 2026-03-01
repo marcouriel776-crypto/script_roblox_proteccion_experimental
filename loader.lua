@@ -4,10 +4,14 @@
 local base = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
 
 local modules = {
-    "module_core.lua",
-    "module_protection.lua",
-    "module_smart.lua",
-    "module_recovery.lua"
+  "module_settings.lua",   -- si existe
+  "module_core.lua",
+  "module_ui.lua",
+  "module_protection.lua",
+  "module_smart.lua",
+  "module_recovery.lua",
+  "module_utils.lua",
+  "module_audio.lua",
 }
 
 for _, m in ipairs(modules) do
