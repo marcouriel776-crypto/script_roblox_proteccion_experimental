@@ -1,148 +1,232 @@
 -- module_ui.lua
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local CoreGui = game:GetService("CoreGui")
+-- Universal Protection - Neon Pro UI
+
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
-repeat task.wait() until CoreReady
-local ok, ScreenGui = pcall(function() return CoreGui:FindFirstChild("ProtectionUI") end)
-if not ok or not ScreenGui then
-    warn("module_ui: ProtectionUI not found, aborting UI helpers")
-    return
-end
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
 
-local Main = ScreenGui:FindFirstChild("Main") or ScreenGui:FindFirstChildOfClass("Frame")
-local Content
-if Main then
-    Content = Main:FindFirstChild("Content") or Main:FindFirstChildWhichIsA("ScrollingFrame")
-end
-if not Content then
-    Content = ScreenGui:FindFirstChildWhichIsA("ScrollingFrame") or ScreenGui:FindFirstChild("Content")
-end
+local module = {}
 
-if not Main or not Content then
-    warn("module_ui: Main or Content not detected (structure mismatch).")
-    pcall(function()
-        print("module_ui: ScreenGui children:")
-        for i, c in ipairs(ScreenGui:GetChildren()) do
-            print(" -", i, c.Name, c.ClassName)
-            for j, cc in ipairs(c:GetChildren()) do
-                print("    ->", j, cc.Name, cc.ClassName)
-            end
-        end
-    end)
-    return
-end
+--------------------------------------------------
+-- CREAR GUI
+--------------------------------------------------
 
-local function safeTween(obj, props, time, style, dir)
-    local suc, err = pcall(function()
-        local info = TweenInfo.new(time or 0.18, style or Enum.EasingStyle.Quad, dir or Enum.EasingDirection.Out)
-        local tween = TweenService:Create(obj, info, props)
-        tween:Play()
-    end)
-    if not suc then warn("safeTween failed:", err) end
-end
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ProtectionUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
 
-local function StyleButton(btn, kind)
-    if not btn or not btn:IsA("GuiObject") then return end
-    local colors = {
-        primary = Color3.fromRGB(70,120,220),
-        danger = Color3.fromRGB(190,60,60),
-        success = Color3.fromRGB(60,160,90),
-        neutral = Color3.fromRGB(90,90,100)
-    }
-    local color = colors[kind] or colors.neutral
-    pcall(function()
-        btn.BackgroundColor3 = color
-        btn.TextColor3 = Color3.fromRGB(245,245,245)
-        btn.AutoButtonColor = true
-        if not btn:FindFirstChildOfClass("UICorner") then Instance.new("UICorner", btn).CornerRadius = UDim.new(0,14) end
-    end)
-end
+--------------------------------------------------
+-- SOMBRA
+--------------------------------------------------
 
-local function CreateSection(title)
-    local Holder = Instance.new("Frame")
-    Holder.Name = "Section_" .. tostring(title)
-    Holder.Parent = Content
-    Holder.Size = UDim2.fromScale(0.95, 0.08)
-    Holder.BackgroundTransparency = 1
+local Shadow = Instance.new("Frame")
+Shadow.Size = UDim2.fromScale(0.42, 0.5)
+Shadow.Position = UDim2.fromScale(0.5, 0.5)
+Shadow.AnchorPoint = Vector2.new(0.5,0.5)
+Shadow.BackgroundColor3 = Color3.fromRGB(0,0,0)
+Shadow.BackgroundTransparency = 0.6
+Shadow.ZIndex = 0
+Shadow.Parent = ScreenGui
 
-    local Label = Instance.new("TextLabel")
-    Label.Parent = Holder
-    Label.Size = UDim2.fromScale(1, 0.9)
-    Label.BackgroundTransparency = 1
-    Label.Text = title
-    Label.Font = Enum.Font.GothamBold
-    Label.TextScaled = true
-    Label.TextColor3 = Color3.fromRGB(200,200,220)
-    Label.TextXAlignment = Enum.TextXAlignment.Left
+local ShadowCorner = Instance.new("UICorner")
+ShadowCorner.CornerRadius = UDim.new(0, 24)
+ShadowCorner.Parent = Shadow
 
-    local Line = Instance.new("Frame")
-    Line.Parent = Holder
-    Line.Size = UDim2.fromScale(1, 0.05)
-    Line.Position = UDim2.fromScale(0, 0.95)
-    Line.BackgroundColor3 = Color3.fromRGB(65,65,80)
-    Line.BorderSizePixel = 0
+--------------------------------------------------
+-- MAIN WINDOW
+--------------------------------------------------
 
-    return Holder, Label
-end
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromScale(0.42, 0.5)
+Main.Position = UDim2.fromScale(0.5, 0.5)
+Main.AnchorPoint = Vector2.new(0.5,0.5)
+Main.BackgroundColor3 = Color3.fromRGB(18,18,30)
+Main.Parent = ScreenGui
 
-local Floating = ScreenGui:FindFirstChild("FloatingButton") or ScreenGui:FindFirstChildOfClass("TextButton")
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 24)
+Corner.Parent = Main
 
-local function FadeOutMain()
-    Main.Visible = false
-end
-local function FadeInMain()
-    Main.Visible = true
-end
+local Stroke = Instance.new("UIStroke")
+Stroke.Thickness = 2
+Stroke.Color = Color3.fromRGB(120, 80, 255)
+Stroke.Parent = Main
 
-if Floating then
-    pcall(function()
-        Floating:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() end)
-    end)
-    pcall(function()
-        Floating.MouseEnter:Connect(function() safeTween(Floating, {Size = UDim2.fromScale(0.135,0.135)}, 0.12) end)
-        Floating.MouseLeave:Connect(function() safeTween(Floating, {Size = UDim2.fromScale(0.12,0.12)}, 0.12) end)
-    end)
-    if not Floating:FindFirstChild("Shadow") then
-        local sh = Instance.new("Frame")
-        sh.Name = "Shadow"
-        sh.Size = UDim2.fromScale(1.04,1.04)
-        sh.Position = UDim2.fromScale(-0.02,-0.02)
-        sh.BackgroundTransparency = 0.6
-        sh.BackgroundColor3 = Color3.fromRGB(0,0,0)
-        sh.ZIndex = math.max(0, (Floating.ZIndex or 0) - 1)
-        sh.Parent = Floating
-        Instance.new("UICorner", sh).CornerRadius = UDim.new(1,0)
-    end
+--------------------------------------------------
+-- HEADER
+--------------------------------------------------
 
-    function FadeOutMain()
-        pcall(function()
-            safeTween(Main, {Position = Main.Position + UDim2.fromScale(0,0.02), BackgroundTransparency = 1}, 0.18)
-            task.delay(0.18, function() Main.Visible = false end)
-        end)
-    end
-    function FadeInMain()
-        pcall(function()
-            Main.Visible = true
-            safeTween(Main, {Position = Main.Position - UDim2.fromScale(0,0.02), BackgroundTransparency = 0}, 0.18)
-        end)
-    end
-end
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1,0,0,60)
+Header.BackgroundColor3 = Color3.fromRGB(25,25,45)
+Header.Parent = Main
 
-pcall(function()
-    local prot = Content:FindFirstChild("ProtectionToggle") or Content:FindFirstChildOfClass("TextButton")
-    if prot then StyleButton(prot, "primary") end
-    local close = Main:FindFirstChild("CloseButton") or Main:FindFirstChildWhichIsA("TextButton")
-    if close then StyleButton(close, "danger") end
-    local minb = Main:FindFirstChild("MinimizeButton")
-    if minb then StyleButton(minb, "neutral") end
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0,24)
+HeaderCorner.Parent = Header
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1,0,1,0)
+Title.BackgroundTransparency = 1
+Title.Text = "Universal Protection"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 22
+Title.TextColor3 = Color3.fromRGB(255,255,255)
+Title.Parent = Header
+
+--------------------------------------------------
+-- FPS + STATUS
+--------------------------------------------------
+
+local Info = Instance.new("TextLabel")
+Info.Position = UDim2.new(0,0,1,-35)
+Info.Size = UDim2.new(1,0,0,30)
+Info.BackgroundTransparency = 1
+Info.Font = Enum.Font.Gotham
+Info.TextSize = 16
+Info.TextColor3 = Color3.fromRGB(160,160,255)
+Info.Parent = Main
+
+local protectionEnabled = false
+
+RunService.RenderStepped:Connect(function()
+    local fps = math.floor(1 / RunService.RenderStepped:Wait())
+    local status = protectionEnabled and "ACTIVE" or "OFF"
+    Info.Text = "FPS: "..fps.." | Status: "..status
 end)
 
-_G.UI_CreateSection = CreateSection
-_G.UI_StyleButton = StyleButton
-_G.UI_FadeInMain = FadeInMain
-_G.UI_FadeOutMain = FadeOutMain
+--------------------------------------------------
+-- CONTENT
+--------------------------------------------------
 
-print("✅ module_ui loaded — UI helpers ready")
+local Content = Instance.new("Frame")
+Content.Position = UDim2.new(0,0,0,70)
+Content.Size = UDim2.new(1,0,1,-110)
+Content.BackgroundTransparency = 1
+Content.Parent = Main
+
+--------------------------------------------------
+-- ENABLE BUTTON
+--------------------------------------------------
+
+local EnableButton = Instance.new("TextButton")
+EnableButton.Size = UDim2.new(0.6,0,0,45)
+EnableButton.Position = UDim2.new(0.2,0,0.2,0)
+EnableButton.Text = "Enable Protection"
+EnableButton.Font = Enum.Font.GothamBold
+EnableButton.TextSize = 18
+EnableButton.TextColor3 = Color3.fromRGB(255,255,255)
+EnableButton.BackgroundColor3 = Color3.fromRGB(70,100,255)
+EnableButton.Parent = Content
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0,18)
+ButtonCorner.Parent = EnableButton
+
+EnableButton.MouseButton1Click:Connect(function()
+    protectionEnabled = not protectionEnabled
+    
+    if protectionEnabled then
+        EnableButton.Text = "Disable Protection"
+        EnableButton.BackgroundColor3 = Color3.fromRGB(200,70,90)
+    else
+        EnableButton.Text = "Enable Protection"
+        EnableButton.BackgroundColor3 = Color3.fromRGB(70,100,255)
+    end
+end)
+
+--------------------------------------------------
+-- MINIMIZE
+--------------------------------------------------
+
+local Minimize = Instance.new("TextButton")
+Minimize.Size = UDim2.new(0,40,0,40)
+Minimize.Position = UDim2.new(1,-90,0,10)
+Minimize.Text = "-"
+Minimize.Font = Enum.Font.GothamBold
+Minimize.TextSize = 24
+Minimize.TextColor3 = Color3.new(1,1,1)
+Minimize.BackgroundColor3 = Color3.fromRGB(80,80,120)
+Minimize.Parent = Header
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(1,0)
+MinCorner.Parent = Minimize
+
+--------------------------------------------------
+-- FLOAT BUTTON
+--------------------------------------------------
+
+local FloatButton = Instance.new("TextButton")
+FloatButton.Size = UDim2.fromOffset(60,60)
+FloatButton.Position = UDim2.fromScale(0.9,0.85)
+FloatButton.Text = "UP"
+FloatButton.Font = Enum.Font.GothamBold
+FloatButton.TextSize = 16
+FloatButton.TextColor3 = Color3.new(1,1,1)
+FloatButton.BackgroundColor3 = Color3.fromRGB(120,80,255)
+FloatButton.Visible = false
+FloatButton.Parent = ScreenGui
+
+local FloatCorner = Instance.new("UICorner")
+FloatCorner.CornerRadius = UDim.new(1,0)
+FloatCorner.Parent = FloatButton
+
+--------------------------------------------------
+-- MINIMIZE LOGIC
+--------------------------------------------------
+
+Minimize.MouseButton1Click:Connect(function()
+    Main.Visible = false
+    Shadow.Visible = false
+    FloatButton.Visible = true
+end)
+
+FloatButton.MouseButton1Click:Connect(function()
+    Main.Visible = true
+    Shadow.Visible = true
+    FloatButton.Visible = false
+end)
+
+--------------------------------------------------
+-- DRAG SYSTEM
+--------------------------------------------------
+
+local dragging = false
+local dragStart
+local startPos
+
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+    end
+end)
+
+Header.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+        Shadow.Position = Main.Position
+    end
+end)
+
+Header.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+--------------------------------------------------
+
+return module
