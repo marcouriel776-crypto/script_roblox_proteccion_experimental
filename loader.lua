@@ -56,3 +56,12 @@ for _, m in ipairs(MODULES) do
 end
 
 print("🚀 UPF loader finished")
+print(" ")
+print("==========================================")
+print("UPF Protection Framework Loaded")
+print("Author: markuriel2010")
+print("Co-Developer: Sourcerer")
+print("Repository: script_roblox_proteccion_experimental")
+print("Version: 1.0 Experimental")
+print("==========================================")
+print(" ")
