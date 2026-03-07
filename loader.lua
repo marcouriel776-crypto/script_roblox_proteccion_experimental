@@ -24,6 +24,7 @@ local MODULES = {
     "module_smart.lua",
     "module_recovery.lua",
     "module_audio.lua",
+    "module_modal_detector.lua",
 }
 
 local function LoadModule(name)
