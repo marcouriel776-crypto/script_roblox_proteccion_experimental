@@ -20,6 +20,7 @@ local MODULES = {
     "module_core.lua",
     "module_utils.lua",
     "module_ui.lua",
+    "module_ui_logs.lua",
     "module_protection.lua",
     "module_smart.lua",
     "module_recovery.lua",
