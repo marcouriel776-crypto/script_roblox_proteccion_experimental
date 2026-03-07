@@ -1,59 +1,45 @@
 -- module_protection.lua
-local Players = game:GetService("Players")
+local UPF = _G.UPF
+if not UPF then warn("UPF missing"); return end
+
 local RunService = game:GetService("RunService")
+local Utils = UPF.Utils
 
-repeat task.wait() until CoreReady
-repeat task.wait() until Character and Character:FindFirstChild("Humanoid") and Character:FindFirstChild("HumanoidRootPart")
-
-Humanoid = Character:FindFirstChild("Humanoid")
-RootPart = Character:FindFirstChild("HumanoidRootPart")
-
-BlockedEvents = BlockedEvents or 0
-LastSafePosition = LastSafePosition or nil
+UPF.State.Protection = UPF.State.Protection or {}
+UPF.State.Protection.BlockedEvents = UPF.State.Protection.BlockedEvents or 0
+UPF.State.LastSafePosition = UPF.State.LastSafePosition or nil
 
 local MAX_DISTANCE_PER_FRAME = 35
 local MAX_LINEAR_VELOCITY = 120
 
-local function ClearForces(part)
-    if not part then return end
-    pcall(function()
-        part.AssemblyLinearVelocity = Vector3.zero
-        part.AssemblyAngularVelocity = Vector3.zero
-    end)
-    for _, v in ipairs(part:GetChildren()) do
-        if v:IsA("BodyVelocity") or v:IsA("BodyAngularVelocity") or v:IsA("BodyGyro") or v:IsA("LinearVelocity") or v:IsA("AngularVelocity") then
-            pcall(function() v:Destroy() end)
-        end
-    end
-end
-
 local lastPosition = nil
-Connections.ProtectionHeartbeat = RunService.Heartbeat:Connect(function()
-    if not ScriptRunning then return end
-    if not ProtectionEnabled then return end
-    if not RootPart or not Humanoid then return end
 
-    if not lastPosition then lastPosition = RootPart.Position return end
+UPF.Connections.ProtectionHeartbeat = RunService.Heartbeat:Connect(function()
+    if not UPF.State.ScriptRunning then return end
+    if not UPF.State.ProtectionEnabled then return end
+    if not UPF.RootPart or not UPF.Humanoid then return end
 
-    local dist = (RootPart.Position - lastPosition).Magnitude
+    if not lastPosition then lastPosition = UPF.RootPart.Position return end
+
+    local dist = (UPF.RootPart.Position - lastPosition).Magnitude
     if dist > MAX_DISTANCE_PER_FRAME then
-        pcall(function() SafeRollback(RootPart, CFrame.new(lastPosition)) end)
-        ClearForces(RootPart)
-        BlockedEvents = (BlockedEvents or 0) + 1
+        pcall(function() UPF.Utils.SafeRollback(UPF.RootPart, CFrame.new(lastPosition)) end)
+        UPF.Utils.ClearForces(UPF.RootPart)
+        UPF.State.Protection.BlockedEvents = UPF.State.Protection.BlockedEvents + 1
     end
 
     local vel = 0
-    pcall(function() vel = RootPart.AssemblyLinearVelocity.Magnitude end)
+    pcall(function() vel = UPF.RootPart.AssemblyLinearVelocity.Magnitude end)
     if vel > MAX_LINEAR_VELOCITY then
-        ClearForces(RootPart)
-        BlockedEvents = (BlockedEvents or 0) + 1
+        UPF.Utils.ClearForces(UPF.RootPart)
+        UPF.State.Protection.BlockedEvents = UPF.State.Protection.BlockedEvents + 1
     end
 
-    if Humanoid.FloorMaterial ~= Enum.Material.Air and vel < 10 then
-        LastSafePosition = RootPart.CFrame
+    if UPF.Humanoid and UPF.Humanoid.FloorMaterial ~= Enum.Material.Air and vel < 10 then
+        UPF.State.LastSafePosition = UPF.RootPart.CFrame
     end
 
-    lastPosition = RootPart.Position
+    lastPosition = UPF.RootPart.Position
 end)
 
-print("✅ Protection module loaded successfully")
+print("✅ Protection module loaded (UPF-connected)")
