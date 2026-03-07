@@ -1,62 +1,103 @@
 -- module_audio.lua
-local RunService = game:GetService("RunService")
+-- UPF Audio Shield (Clean Architecture)
+
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local UPF = _G.UPF
+if not UPF then
+    warn("UPF not initialized before Audio module")
+    return
+end
+
 local LocalPlayer = Players.LocalPlayer
 
-repeat task.wait() until CoreReady
-repeat task.wait() until LocalPlayer and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+UPF.State = UPF.State or {}
+UPF.Settings = UPF.Settings or {}
+UPF.Connections = UPF.Connections or {}
 
-local enabled = (Settings and Settings.audio_shield_enabled) or false
-local radius = (Settings and Settings.audio_shield_radius) or 20
-local level = (Settings and Settings.audio_shield_level) or 0.25
+--------------------------------------------------
+-- STATE INIT
+--------------------------------------------------
+
+UPF.State.Audio = UPF.State.Audio or {
+    Enabled = UPF.Settings.audio_shield_enabled or false,
+    Radius = UPF.Settings.audio_shield_radius or 20,
+    Level = UPF.Settings.audio_shield_level or 0.25
+}
 
 local OriginalVolumes = setmetatable({}, {__mode = "k"})
 
+--------------------------------------------------
+-- INTERNAL FUNCTIONS
+--------------------------------------------------
+
 local function saveOriginal(sound)
-    if not sound then return end
-    if not OriginalVolumes[sound] then OriginalVolumes[sound] = sound.Volume end
+    if sound and not OriginalVolumes[sound] then
+        OriginalVolumes[sound] = sound.Volume
+    end
 end
 
 local function setVolume(sound, v)
-    if not sound then return end
-    pcall(function() sound.Volume = v end)
+    if sound then
+        pcall(function()
+            sound.Volume = v
+        end)
+    end
 end
 
 local function restoreSound(sound)
-    if not sound then return end
-    if OriginalVolumes[sound] then
-        pcall(function() sound.Volume = OriginalVolumes[sound] end)
+    if sound and OriginalVolumes[sound] then
+        pcall(function()
+            sound.Volume = OriginalVolumes[sound]
+        end)
         OriginalVolumes[sound] = nil
     end
 end
 
 local function applyShieldToCharacter(plr, shieldOn)
-    if not plr or not plr.Character then return end
-    for _, s in ipairs(plr.Character:GetDescendants()) do
-        if s:IsA("Sound") then
-            if shieldOn then saveOriginal(s); setVolume(s, level) else restoreSound(s) end
+    if not plr.Character then return end
+
+    for _, obj in ipairs(plr.Character:GetDescendants()) do
+        if obj:IsA("Sound") then
+            if shieldOn then
+                saveOriginal(obj)
+                setVolume(obj, UPF.State.Audio.Level)
+            else
+                restoreSound(obj)
+            end
         end
     end
 end
 
 local function isPlayerNear(plr)
-    if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") or not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        return false
-    end
-    local a = plr.Character.HumanoidRootPart.Position
-    local b = LocalPlayer.Character.HumanoidRootPart.Position
-    return (a - b).Magnitude <= radius
+    if not plr.Character or not LocalPlayer.Character then return false end
+    
+    local hrpA = plr.Character:FindFirstChild("HumanoidRootPart")
+    local hrpB = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if not hrpA or not hrpB then return false end
+    
+    return (hrpA.Position - hrpB.Position).Magnitude <= UPF.State.Audio.Radius
 end
 
-Connections.AudioShieldHeartbeat = RunService.Heartbeat:Connect(function()
-    if not CoreReady then return end
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+--------------------------------------------------
+-- HEARTBEAT LOOP
+--------------------------------------------------
+
+UPF.Connections.AudioShieldHeartbeat = RunService.Heartbeat:Connect(function()
+    if not UPF.State.Audio.Enabled then
+        return
+    end
+
+    if not LocalPlayer.Character then return end
 
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
             local ok, near = pcall(isPlayerNear, plr)
+
             if ok and near then
-                applyShieldToCharacter(plr, enabled)
+                applyShieldToCharacter(plr, true)
             else
                 applyShieldToCharacter(plr, false)
             end
@@ -64,26 +105,41 @@ Connections.AudioShieldHeartbeat = RunService.Heartbeat:Connect(function()
     end
 end)
 
-function ToggleAudioShield(on)
-    if on == nil then enabled = not enabled else enabled = on end
-    Settings = Settings or {}
-    Settings.audio_shield_enabled = enabled
-    if type(SaveUPFSettings) == "function" then pcall(SaveUPFSettings) end
-    print("Audio shield:", enabled)
+--------------------------------------------------
+-- PUBLIC METHODS
+--------------------------------------------------
+
+function UPF:ToggleAudioShield(on)
+    if on == nil then
+        UPF.State.Audio.Enabled = not UPF.State.Audio.Enabled
+    else
+        UPF.State.Audio.Enabled = on
+    end
+
+    UPF.Settings.audio_shield_enabled = UPF.State.Audio.Enabled
+    if UPF.SaveSettings then
+        UPF:SaveSettings()
+    end
+
+    print("🔊 Audio Shield:", UPF.State.Audio.Enabled)
 end
 
-function SetAudioShieldRadius(r)
-    radius = math.max(1, tonumber(r) or radius)
-    Settings = Settings or {}
-    Settings.audio_shield_radius = radius
-    if type(SaveUPFSettings) == "function" then pcall(SaveUPFSettings) end
+function UPF:SetAudioShieldRadius(r)
+    UPF.State.Audio.Radius = math.max(1, tonumber(r) or UPF.State.Audio.Radius)
+    UPF.Settings.audio_shield_radius = UPF.State.Audio.Radius
+
+    if UPF.SaveSettings then
+        UPF:SaveSettings()
+    end
 end
 
-function SetAudioShieldLevel(l)
-    level = math.clamp(tonumber(l) or level, 0, 1)
-    Settings = Settings or {}
-    Settings.audio_shield_level = level
-    if type(SaveUPFSettings) == "function" then pcall(SaveUPFSettings) end
+function UPF:SetAudioShieldLevel(l)
+    UPF.State.Audio.Level = math.clamp(tonumber(l) or UPF.State.Audio.Level, 0, 1)
+    UPF.Settings.audio_shield_level = UPF.State.Audio.Level
+
+    if UPF.SaveSettings then
+        UPF:SaveSettings()
+    end
 end
 
-print("✅ module_audio loaded — spatial shield ready (client-side only)")
+print("✅ Audio module v2 loaded (UPF connected)")
