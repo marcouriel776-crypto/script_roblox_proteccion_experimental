@@ -1,67 +1,130 @@
 -- module_recovery.lua
-local UPF = _G.UPF
-if not UPF then warn("UPF missing"); return end
+-- UPF Recovery System + God Mode
 
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-UPF.State.GodMode = UPF.State.GodMode or UPF.State.GodModeEnabled or false
-UPF.State.SafePoint = UPF.State.SafePoint or nil
-UPF.State.LastAutoReturn = UPF.State.LastAutoReturn or 0
 
--- God mode heartbeat
-UPF.Connections.GodHeartbeat = RunService.Heartbeat:Connect(function()
-    if not UPF.State.ScriptRunning or not UPF.State.GodMode then return end
-    if not UPF.Humanoid then return end
-    pcall(function()
-        if UPF.Humanoid.MaxHealth < 100 then UPF.Humanoid.MaxHealth = 100 end
-        if UPF.Humanoid.Health < UPF.Humanoid.MaxHealth then UPF.Humanoid.Health = UPF.Humanoid.MaxHealth end
-    end)
-end)
+local player = Players.LocalPlayer
 
--- Safe point tracker
-UPF.Connections.SafePointTracker = RunService.Heartbeat:Connect(function()
-    if not UPF.RootPart or not UPF.Humanoid then return end
-    local vel = 0
-    pcall(function() vel = UPF.RootPart.AssemblyLinearVelocity.Magnitude end)
-    if UPF.Humanoid.FloorMaterial ~= Enum.Material.Air and vel < 10 then
-        UPF.State.SafePoint = UPF.RootPart.CFrame
+_G.UPF = _G.UPF or {}
+local UPF = _G.UPF
+
+UPF.State = UPF.State or {}
+UPF.State.GodMode = UPF.State.GodMode or false
+
+UPF.Recovery = UPF.Recovery or {}
+local Recovery = UPF.Recovery
+
+Recovery.Connections = {}
+
+---------------------------------------------------
+-- GOD MODE CORE
+---------------------------------------------------
+
+local function protectHumanoid(humanoid)
+
+    if not humanoid then return end
+
+    if Recovery.Connections.Health then
+        Recovery.Connections.Health:Disconnect()
     end
 
-    -- Auto return if out of bounds
-    if UPF.State.AutoReturnEnabled and UPF.State.SafePoint then
-        local ok, y = pcall(function() return UPF.RootPart.Position.Y end)
-        if ok and (y > 2000 or y < -500) and (tick() - UPF.State.LastAutoReturn > UPF.State.ReturnCooldown) then
-            UPF.State.LastAutoReturn = tick()
-            pcall(function() UPF.RootPart.CFrame = UPF.State.SafePoint end)
+    Recovery.Connections.Health = humanoid.HealthChanged:Connect(function()
+
+        if not UPF.State.GodMode then return end
+
+        if humanoid.Health < humanoid.MaxHealth then
+            humanoid.Health = humanoid.MaxHealth
         end
+
+    end)
+
+end
+
+---------------------------------------------------
+-- CHARACTER MONITOR
+---------------------------------------------------
+
+local function monitorCharacter(character)
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+    if humanoid then
+        protectHumanoid(humanoid)
     end
+
+end
+
+---------------------------------------------------
+-- RESPAWN SUPPORT
+---------------------------------------------------
+
+player.CharacterAdded:Connect(function(character)
+
+    task.wait(1)
+
+    monitorCharacter(character)
+
 end)
 
-function UPF:ReturnToSafePoint()
-    if UPF.State.SafePoint and UPF.RootPart then
-        pcall(function() UPF.RootPart.CFrame = UPF.State.SafePoint end)
-    end
+if player.Character then
+    monitorCharacter(player.Character)
 end
+
+---------------------------------------------------
+-- PUBLIC API
+---------------------------------------------------
 
 function UPF:ToggleGodMode(on)
-    if on == nil then UPF.State.GodMode = not UPF.State.GodMode else UPF.State.GodMode = on end
-    if UPF.SaveSettings then UPF:SaveSettings() end
+
+    if on == nil then
+        UPF.State.GodMode = not UPF.State.GodMode
+    else
+        UPF.State.GodMode = on
+    end
+
+    print("🛡 GodMode:", UPF.State.GodMode)
+
+    if player.Character then
+        monitorCharacter(player.Character)
+    end
+
+    if UPF.SaveSettings then
+        UPF:SaveSettings()
+    end
+
 end
 
--- Unfreeze helper
+---------------------------------------------------
+-- RECOVERY FUNCTIONS
+---------------------------------------------------
+
 function UPF:RecoverPlayer()
-    if not UPF.RootPart or not UPF.Humanoid then return end
-    pcall(function()
-        UPF.RootPart.AssemblyLinearVelocity = Vector3.zero
-        UPF.RootPart.AssemblyAngularVelocity = Vector3.zero
-        for _, v in ipairs(UPF.RootPart:GetChildren()) do
-            if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") or v:IsA("BodyAngularVelocity") then
-                v:Destroy()
-            end
-        end
-        UPF.RootPart.Anchored = true
-        task.wait(0.15)
-        UPF.RootPart.Anchored = false
-    end)
+
+    local character = player.Character
+    if not character then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+
+    if humanoid then
+        humanoid.Health = humanoid.MaxHealth
+        print("💚 Player recovered")
+    end
+
 end
 
-print("✅ Recovery module v2 loaded")
+function UPF:ReturnToSafePoint()
+
+    local character = player.Character
+    if not character then return end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+
+    if root then
+        root.Velocity = Vector3.new(0,0,0)
+        print("📍 Safe position restored")
+    end
+
+end
+
+print("✅ module_recovery loaded")
