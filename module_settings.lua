@@ -1,9 +1,11 @@
 -- module_settings.lua
-local HttpService = game:GetService("HttpService")
+local UPF = _G.UPF
+if not UPF then warn("UPF not initialized"); return end
 
+local HttpService = game:GetService("HttpService")
 local SETTINGS_FILENAME = "upf_config.json"
 
-Settings = Settings or {
+UPF.Settings = UPF.Settings or {
     protection_enabled = false,
     protection_manual_override = nil,
     godmode_enabled = false,
@@ -28,42 +30,22 @@ local function try_writefile(path, content)
     return ok
 end
 
-function LoadUPFSettings()
+function UPF:LoadSettings()
     local src = try_readfile(SETTINGS_FILENAME) or _G.UPF_LOCAL_SETTINGS
     if not src then return false end
     local ok, parsed = pcall(function() return HttpService:JSONDecode(src) end)
     if not ok or type(parsed) ~= "table" then return false end
-    for k,v in pairs(parsed) do Settings[k] = v end
-    pcall(function()
-        ProtectionEnabled = Settings.protection_enabled
-        ProtectionManualOverride = Settings.protection_manual_override
-        GodModeEnabled = Settings.godmode_enabled
-        SmartMode = Settings.smart_mode
-        AutoReturnEnabled = Settings.auto_return_enabled
-        ReturnCooldown = Settings.return_cooldown or ReturnCooldown
-    end)
+    for k,v in pairs(parsed) do UPF.Settings[k] = v end
     return true
 end
 
-function SaveUPFSettings()
-    pcall(function()
-        Settings.protection_enabled = ProtectionEnabled or Settings.protection_enabled
-        Settings.protection_manual_override = (ProtectionManualOverride ~= nil) and ProtectionManualOverride or Settings.protection_manual_override
-        Settings.godmode_enabled = GodModeEnabled or Settings.godmode_enabled
-        Settings.smart_mode = SmartMode or Settings.smart_mode
-        Settings.auto_return_enabled = AutoReturnEnabled or Settings.auto_return_enabled
-        Settings.return_cooldown = ReturnCooldown or Settings.return_cooldown
-        -- audio fields kept in Settings by module_audio
-    end)
-
-    local encoded = HttpService:JSONEncode(Settings)
+function UPF:SaveSettings()
+    local encoded = HttpService:JSONEncode(UPF.Settings)
     local ok = try_writefile(SETTINGS_FILENAME, encoded)
-    if not ok then
-        _G.UPF_LOCAL_SETTINGS = encoded
-    end
+    if not ok then _G.UPF_LOCAL_SETTINGS = encoded end
     return ok
 end
 
--- load on start
-LoadUPFSettings()
-print("✅ Settings module loaded (persistence ready)")
+-- try load existing settings
+pcall(function() UPF:LoadSettings() end)
+print("✅ Settings loaded")
