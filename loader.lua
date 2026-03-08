@@ -15,6 +15,7 @@ local MODULES = {
     "module_smart.lua",
     "module_recovery.lua",
     "module_audio.lua",
+    "module_antifreeze.lua",
 
     -- UI (carga después de que las APIs básicas estén disponibles)
     "module_ui_theme.lua",
