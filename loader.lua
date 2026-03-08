@@ -18,8 +18,8 @@ local MODULES = {
     "module_antifreeze.lua",
 
     -- UI (carga después de que las APIs básicas estén disponibles)
-    "module_ui_theme.lua",
     "module_ui.lua",
+    "module_ui_theme.lua",
     "module_ui_logs.lua",
     "module_modal_detector.lua",
     "module_resilience.lua",
