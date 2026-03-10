@@ -50,3 +50,23 @@ if not UPF.SaveSettings then UPF.SaveSettings = function() print("UPF (stub): Sa
 UPF.Connections = UPF.Connections or {}
 
 print("✅ module_upf_api loaded (stubs in place). Real implementations will override these when available.")
+
+-- al final de module_upf_api.lua, expone flags de control
+UPF.State = UPF.State or {}
+UPF.State.Resilience = UPF.State.Resilience or {}
+-- por seguridad, por defecto NO permitir Auto-Reconnect hasta que el usuario lo habilite
+if UPF.State.Resilience.allow_reconnect == nil then
+    UPF.State.Resilience.allow_reconnect = false
+end
+
+-- Guardar stub AttemptReconnect sólo si no existe (pero NO realiza Teleport por defecto)
+if not UPF.Resilience then UPF.Resilience = {} end
+if not UPF.Resilience.AttemptReconnect then
+    UPF.Resilience.AttemptReconnect = function()
+        print("UPF (stub) AttemptReconnect called but allow_reconnect is", UPF.State.Resilience.allow_reconnect)
+        if UPF.State.Resilience.allow_reconnect then
+            print("UPF (stub) allow_reconnect=true but real implementation may override this.")
+        end
+        return false, "stub_block"
+    end
+end
