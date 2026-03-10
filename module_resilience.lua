@@ -4,19 +4,44 @@
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local TeleportService = game:GetService("TeleportService")
-local Workspace = game:GetService("Workspace")
-
-local LocalPlayer = Players.LocalPlayer
-local UPF = _G.UPF
-if not UPF then
-    warn("module_resilience: UPF no inicializado, esperando...")
-    -- no abortamos del todo: intentamos esperar a core
-    repeat task.wait(0.2) until _G.UPF or tick() - (tick()) > 5
-    UPF = _G.UPF
-    if not UPF then
-        warn("module_resilience: UPF no disponible, saliendo.")
-        return
+-- ... dentro del archivo ...
+local function attemptReconnect()
+    -- respeta el flag de configuración y el kill-switch global
+    UPF.State.Resilience = UPF.State.Resilience or {}
+    local allow = UPF.State.Resilience.allow_reconnect or UPF.State.Resilience.auto_reconnect_enabled
+    if not allow then
+        warn("[resilience] Auto-reconnect blocked by configuration (allow_reconnect=false).")
+        UPF.State.Resilience.reconnectAttempts = (UPF.State.Resilience.reconnectAttempts or 0) + 1
+        return false, "blocked_by_config"
     end
+
+    if tick() - state.lastReconnect < RECONNECT_COOLDOWN then
+        return false, "cooldown"
+    end
+    if state.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS then
+        return false, "max_attempts"
+    end
+
+    state.reconnectAttempts = state.reconnectAttempts + 1
+    state.lastReconnect = tick()
+
+    showNotification("Attempting reconnect (attempt "..tostring(state.reconnectAttempts)..")")
+    pcall(function() if type(UPF.SaveSettings) == "function" then UPF:SaveSettings() end end)
+
+    -- Use Teleport only if allow flag explicitly true, otherwise skip
+    if not (UPF.State.Resilience and UPF.State.Resilience.allow_reconnect) then
+        warn("[resilience] Not performing TeleportService:Teleport because allow_reconnect is false.")
+        return false, "blocked_by_flag"
+    end
+
+    local ok, err = pcall(function()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end)
+    if not ok then
+        warn("[resilience] Teleport failed:", err)
+        return false, err
+    end
+    return true
 end
 
 -- CONFIG
