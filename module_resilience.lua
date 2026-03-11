@@ -1,31 +1,28 @@
--- module_resilience.lua (safe, no varargs)
--- UPF Resilience - versión sin varargs para evitar errores de compilación.
+-- module_resilience.lua
+-- SAFE VERSION (NO REJOIN)
+-- Detecta stuck/freeze y realiza *solo* recovery local; NO usa TeleportService.
+
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local TeleportService = game:GetService("TeleportService")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Asegurar API global
 _G.UPF = _G.UPF or {}
 local UPF = _G.UPF
 
+UPF.Resilience = UPF.Resilience or {}
+
+-- Estado de resilience (seguro)
 UPF.State = UPF.State or {}
 UPF.State.Resilience = UPF.State.Resilience or {}
 
--- Config por defecto (segura)
 local RES = UPF.State.Resilience
-if RES.allow_reconnect == nil then RES.allow_reconnect = false end
-if RES.auto_reconnect_enabled == nil then RES.auto_reconnect_enabled = false end
+RES.paused = RES.paused or false
 RES.reconnectAttempts = RES.reconnectAttempts or 0
 RES.lastReconnect = RES.lastReconnect or 0
 
-local MAX_RECONNECT_ATTEMPTS = 3
-local RECONNECT_COOLDOWN = 6 -- segundos
-local STUCK_TIME = 5 -- tiempo sin movimiento para considerar "stuck"
-
-UPF.Resilience = UPF.Resilience or {}
-local Res = UPF.Resilience
+local STUCK_TIME = 6 -- segundos (ajustable)
+local MIN_MOVE_DIST = 0.5
 
 -- Estado interno
 local lastMoveTick = tick()
@@ -33,67 +30,54 @@ local lastPos = nil
 local stuckDetectedAt = nil
 local heartbeatConn = nil
 
-local function safePrintSingle(msg)
-    -- imprime de forma segura un solo string (evita varargs)
-    local ok, _ = pcall(function()
+local function safePrint(msg)
+    pcall(function()
         if msg == nil then
-            print("[UPF] (nil)")
+            print("[resilience] (nil)")
         else
-            print(tostring(msg))
+            print("[resilience] "..tostring(msg))
         end
     end)
-    return ok
 end
 
--- Intentar reconectar (solo si allow_reconnect = true)
-function UPF.Resilience.AttemptReconnect()
-    UPF.State.Resilience = UPF.State.Resilience or {}
-    local allow = UPF.State.Resilience.allow_reconnect or UPF.State.Resilience.auto_reconnect_enabled
-    if not allow then
-        warn("[resilience] AttemptReconnect blocked (allow_reconnect=false).")
-        return false, "blocked_by_flag"
-    end
-
-    if tick() - (UPF.State.Resilience.lastReconnect or 0) < RECONNECT_COOLDOWN then
-        return false, "cooldown"
-    end
-    if (UPF.State.Resilience.reconnectAttempts or 0) >= MAX_RECONNECT_ATTEMPTS then
-        return false, "max_attempts"
-    end
-
-    UPF.State.Resilience.reconnectAttempts = (UPF.State.Resilience.reconnectAttempts or 0) + 1
-    UPF.State.Resilience.lastReconnect = tick()
-
-    safePrintSingle("[resilience] Attempting reconnect (attempt " .. tostring(UPF.State.Resilience.reconnectAttempts) .. ")")
-
-    -- Teleport SOLO si la bandera lo permite
-    local ok, err = pcall(function()
-        if not UPF.State.Resilience.allow_reconnect then
-            error("not_allowed")
-        end
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    end)
-
-    if not ok then
-        warn("[resilience] Reconnect failed:", err)
-        return false, err
-    end
-    return true
-end
-
--- Intentar recuperar al jugador (no hace teleport)
+-- Recovery local (no teleport)
 function UPF.Resilience.AttemptRecovery()
-    safePrintSingle("[resilience] AttemptRecovery: trying local recover functions")
+    safePrint("AttemptRecovery: trying local recover functions")
+    -- Preferir funciones públicas si existen en UPF
     if type(UPF.RecoverPlayer) == "function" then
         pcall(function() UPF:RecoverPlayer() end)
     end
     if type(UPF.ReturnToSafePoint) == "function" then
         pcall(function() UPF:ReturnToSafePoint() end)
     end
+    -- fallback: try to clear velocities
+    local char = LocalPlayer.Character
+    if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            pcall(function()
+                hrp.AssemblyLinearVelocity = Vector3.zero
+                hrp.AssemblyAngularVelocity = Vector3.zero
+            end)
+        end
+    end
+    safePrint("Player recovered")
 end
 
--- Chequeo de "stuck" (sin varargs)
-local function checkStuckSingle()
+-- NO existe AttemptReconnect en esta versión (no hacemos teleports).
+-- Proporcionamos funciones Pause/Resume para control manual.
+function UPF.Resilience.Pause()
+    RES.paused = true
+    safePrint("paused")
+end
+function UPF.Resilience.Resume()
+    RES.paused = false
+    safePrint("resumed")
+end
+
+-- Check "stuck"
+local function checkStuck()
+    if RES.paused then return end
     local char = LocalPlayer.Character
     if not char then
         lastPos = nil
@@ -106,21 +90,20 @@ local function checkStuckSingle()
     local pos = hrp.Position
     if lastPos then
         local dist = (pos - lastPos).Magnitude
-        if dist > 0.5 then
+        if dist > MIN_MOVE_DIST then
             lastMoveTick = tick()
             stuckDetectedAt = nil
         else
             if tick() - lastMoveTick >= STUCK_TIME then
                 if not stuckDetectedAt then
                     stuckDetectedAt = tick()
-                    warn("[resilience] Player appears stuck - attempting recovery")
+                    safePrint("Player appears stuck - attempting recovery")
                     pcall(function() UPF.Resilience.AttemptRecovery() end)
                 else
+                    -- si persiste, intentar recovery de nuevo y resetear
                     if tick() - stuckDetectedAt > (STUCK_TIME * 1.5) then
-                        warn("[resilience] Stuck persists - considering reconnect (respecting allow_reconnect flag)")
-                        pcall(function()
-                            UPF.Resilience.AttemptReconnect()
-                        end)
+                        safePrint("Stuck persists - re-attempting recovery (no reconnect will occur)")
+                        pcall(function() UPF.Resilience.AttemptRecovery() end)
                         stuckDetectedAt = nil
                         lastMoveTick = tick()
                     end
@@ -133,19 +116,17 @@ local function checkStuckSingle()
     lastPos = pos
 end
 
-local function startHeartbeat()
-    if heartbeatConn then
-        pcall(function() heartbeatConn:Disconnect() end)
-        heartbeatConn = nil
-    end
-    heartbeatConn = RunService.Heartbeat:Connect(function()
-        local ok, err = pcall(checkStuckSingle)
-        if not ok then
-            warn("[resilience] checkStuck error:", err)
-        end
-    end)
+-- Heartbeat
+if heartbeatConn then
+    pcall(function() heartbeatConn:Disconnect() end)
+    heartbeatConn = nil
 end
 
--- Inicializar
-startHeartbeat()
-safePrintSingle("✅ module_resilience (safe) loaded - auto-reconnect disabled by default")
+heartbeatConn = RunService.Heartbeat:Connect(function()
+    local ok, err = pcall(checkStuck)
+    if not ok then
+        warn("[resilience] checkStuck error:", err)
+    end
+end)
+
+safePrint("✅ module_resilience (safe, no reconnect) loaded")
