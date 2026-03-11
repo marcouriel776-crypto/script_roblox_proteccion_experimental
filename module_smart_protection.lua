@@ -1,7 +1,9 @@
 -- module_smart_protection.lua
--- UPF Smart Protection (corregido, versión robusta)
--- Detecta remotos sospechosos, anti-fling, rollback seguro, autocuración y métricas.
--- Cargar en SYSTEMS (antes que UI).
+-- UPF Smart Protection (corregido)
+-- Detecta remotes sospechosos, anti-fling, rollback local y métricas.
+-- No realiza teleports ni reconnects.
+-- Metadata opcional para loader_v4:
+UPF_MODULE = { name = "smart_protection", requires = { "protection", "recovery" } }
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -11,15 +13,8 @@ local LocalPlayer = Players.LocalPlayer
 _G.UPF = _G.UPF or {}
 local UPF = _G.UPF
 
--- metadata opcional (para loader_v4)
-UPF_MODULE = UPF_MODULE or {}
-UPF_MODULE.name = "smart_protection"
-UPF_MODULE.requires = { "protection", "recovery" }
-
--- Estado y configuración por defecto
+-- Estado y configuración
 UPF.State = UPF.State or {}
-UPF.State.FlingEvents = UPF.State.FlingEvents or 0
-UPF.State.BlockedEvents = UPF.State.BlockedEvents or 0
 UPF.State.Smart = UPF.State.Smart or {}
 local State = UPF.State.Smart
 
@@ -28,22 +23,34 @@ State.fling_threshold_safe = State.fling_threshold_safe or 80
 State.fling_threshold_pvp  = State.fling_threshold_pvp or 120
 State.max_distance_per_frame = State.max_distance_per_frame or 35
 State.max_linear_velocity = State.max_linear_velocity or 120
-State.player_velocity_threshold = State.player_velocity_threshold or 100
+State.player_velocity_threshold = State.player_velocity_threshold or 140 -- aumentado para menos falsos positivos
 State.rollback_cooldown = State.rollback_cooldown or 0.6
 
 -- Internals
 local DangerousPlayers = {}   -- [player] = timestamp
 local SuspiciousRemotes = {}  -- name -> timestamp
-local Whitelist = {}          -- keys allowed
-local Blacklist = {}          -- keys blocked
+local Whitelist = {}
+local Blacklist = {}
 local LastRollback = 0
 
+-- minimal logging rate-limit per name
+local _SMART_LOG_LAST = {} -- name -> lastLogTime
+local SMART_LOG_MIN_INTERVAL = 1 -- segundos (1 advertencia por remote por segundo)
+
+local function smart_log(key, msg)
+    local nowt = tick()
+    local last = _SMART_LOG_LAST[key] or 0
+    if nowt - last >= SMART_LOG_MIN_INTERVAL then
+        _SMART_LOG_LAST[key] = nowt
+        warn("[UPF.Smart] "..tostring(msg)..": "..tostring(key))
+    end
+end
+
 local function now() return tick() end
+local function inWhitelist(k) return k and (Whitelist[k] ~= nil) end
+local function inBlacklist(k) return k and (Blacklist[k] ~= nil) end
 
-local function inWhitelist(key) return key and (Whitelist[key] ~= nil) end
-local function inBlacklist(key) return key and (Blacklist[key] ~= nil) end
-
--- API expuesta
+-- API
 UPF.SmartProtection = UPF.SmartProtection or {}
 local API = UPF.SmartProtection
 function API.AddWhitelist(key) if key then Whitelist[key] = now() end end
@@ -52,15 +59,15 @@ function API.AddBlacklist(key) if key then Blacklist[key] = now() end end
 function API.RemoveBlacklist(key) if key then Blacklist[key] = nil end end
 function API.GetStats()
     return {
-        flingEvents = UPF.State.FlingEvents,
-        blockedEvents = UPF.State.BlockedEvents,
+        flingEvents = UPF.State.FlingEvents or 0,
+        blockedEvents = UPF.State.BlockedEvents or 0,
         suspiciousRemotes = SuspiciousRemotes,
         whitelist = Whitelist,
         blacklist = Blacklist
     }
 end
 
--- Heurística para nombres de remotos sospechosos
+-- Heurística keywords
 local SUSPICIOUS_REMOTE_KEYWORDS = {
     "kick","teleport","tp","ban","shutdown","destroy","kill","remove",
     "sethealth","setmaxhealth","giveitem","exploit","force","velocity"
@@ -78,22 +85,21 @@ local function remoteLooksSuspicious(name)
     return false
 end
 
--- Monitor simple para remotes en un contenedor
+-- Monitor remotes en root (best-effort)
 local function monitorRemotes(root)
     if not root then return end
-    for _, obj in ipairs(root:GetDescendants()) do
-        local cls = tostring(obj.ClassName)
-        if cls == "RemoteEvent" or cls == "RemoteFunction" then
-            local name = obj.Name
-            if remoteLooksSuspicious(name) then
-                SuspiciousRemotes[name] = now()
-                UPF.State.BlockedEvents = (UPF.State.BlockedEvents or 0) + 1
-                warn("[UPF.Smart] suspicious remote found:", name, pcall(function() return obj:GetFullName() end) and obj:GetFullName() or "n/a")
+    pcall(function()
+        for _, obj in ipairs(root:GetDescendants()) do
+            local cls = tostring(obj.ClassName)
+            if cls == "RemoteEvent" or cls == "RemoteFunction" then
+                local name = obj.Name
+                if remoteLooksSuspicious(name) then
+                    SuspiciousRemotes[name] = now()
+                    UPF.State.BlockedEvents = (UPF.State.BlockedEvents or 0) + 1
+                    smart_log(name, "suspicious remote found")
+                end
             end
         end
-    end
-    -- nuevas desc
-    pcall(function()
         root.DescendantAdded:Connect(function(obj)
             local cls = tostring(obj.ClassName)
             if cls == "RemoteEvent" or cls == "RemoteFunction" then
@@ -101,14 +107,14 @@ local function monitorRemotes(root)
                 if remoteLooksSuspicious(name) then
                     SuspiciousRemotes[name] = now()
                     UPF.State.BlockedEvents = (UPF.State.BlockedEvents or 0) + 1
-                    warn("[UPF.Smart] new suspicious remote added:", name)
+                    smart_log(name, "new suspicious remote added")
                 end
             end
         end)
     end)
 end
 
--- Anti-fling básico: detectar velocidades altas en otros jugadores
+-- Anti-fling: detecta jugadores con velocidades extremas
 local function checkOtherPlayers()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
@@ -120,23 +126,23 @@ local function checkOtherPlayers()
                 if vel > (State.player_velocity_threshold or threshold) then
                     DangerousPlayers[plr] = now()
                     UPF.State.FlingEvents = (UPF.State.FlingEvents or 0) + 1
-                    -- minimizar impacto: desactivar colisiones localmente
+                    -- minimizar impacto: desactivar colisiones localmente (mejor intento)
                     pcall(function()
-                        if plr.Character then
-                            for _, part in ipairs(plr.Character:GetDescendants()) do
-                                if part:IsA("BasePart") then
-                                    part.CanCollide = false
-                                end
+                        for _,part in ipairs(plr.Character:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                part.CanCollide = false
                             end
                         end
                     end)
+                    smart_log(plr.Name, "player high velocity flagged")
                 end
-                -- detectar BodyVelocity/LinearVelocity en hrp
+                -- detectar BodyVelocity/LinearVelocity en HRP
                 for _, v in ipairs(hrp:GetChildren()) do
                     if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") then
                         DangerousPlayers[plr] = now()
                         UPF.State.FlingEvents = (UPF.State.FlingEvents or 0) + 1
                         pcall(function() v:Destroy() end)
+                        smart_log(plr.Name, "force object removed")
                     end
                 end
             end
@@ -144,7 +150,7 @@ local function checkOtherPlayers()
     end
 end
 
--- Limpiar fuerzas sobre nuestro personaje
+-- Limpia fuerzas en nuestro personaje
 local function clearForcesOnCharacter(char)
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -153,28 +159,17 @@ local function clearForcesOnCharacter(char)
         hrp.AssemblyLinearVelocity = Vector3.zero
         hrp.AssemblyAngularVelocity = Vector3.zero
     end)
-    for _, v in ipairs(hrp:GetChildren()) do
+    for _,v in ipairs(hrp:GetChildren()) do
         if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") or v:IsA("BodyAngularVelocity") or v:IsA("BodyGyro") then
             pcall(function() v:Destroy() end)
         end
     end
 end
 
--- Rollback seguro
-local function SafeRollback(rootpart, targetCFrame)
-    if not rootpart or not targetCFrame then return end
-    if now() - LastRollback < (State.rollback_cooldown or 0.6) then return end
-    LastRollback = now()
-    pcall(function() rootpart.CFrame = targetCFrame end)
-    clearForcesOnCharacter(LocalPlayer.Character)
-    UPF.State.BlockedEvents = (UPF.State.BlockedEvents or 0) + 1
-end
-
--- Track safe points y movimiento
+-- Rollback local (teleport NO, solo mover localmente si es necesario)
 local SafeAutoPoint = nil
 local LastPos = nil
 local LastMoveTick = now()
-
 local function trackMovement()
     local char = LocalPlayer.Character
     if not char then return end
@@ -193,35 +188,20 @@ local function trackMovement()
         local dist = (hrp.Position - LastPos).Magnitude
         if dist > (State.max_distance_per_frame or 35) then
             if SafeAutoPoint then
-                SafeRollback(hrp, SafeAutoPoint)
+                pcall(function() hrp.CFrame = SafeAutoPoint end)
+                clearForcesOnCharacter(LocalPlayer.Character)
+                UPF.State.BlockedEvents = (UPF.State.BlockedEvents or 0) + 1
+                smart_log("rollback", "safe rollback performed")
             else
                 clearForcesOnCharacter(LocalPlayer.Character)
             end
         end
     end
 
-    -- update movement tick
-    if LastPos and (hrp.Position - LastPos).Magnitude > 0.2 or vel > 1 then
-        LastMoveTick = now()
-    end
     LastPos = hrp.Position
 end
 
--- Self-heal
-local function maintainHealth()
-    local char = LocalPlayer.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    pcall(function()
-        if hum.MaxHealth < 100 then hum.MaxHealth = 100 end
-        if UPF.State.GodMode then
-            if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
-        end
-    end)
-end
-
--- Monitor actividad remota ligera (payloads y frecuencia)
+-- Remote activity monitor (light heuristics)
 local RemoteActivity = {} -- remote -> {last, count}
 local function monitorRemoteActivity(remote)
     if not remote or not remote:IsA("RemoteEvent") then return end
@@ -240,12 +220,12 @@ local function monitorRemoteActivity(remote)
             if entry.count > 10 then
                 SuspiciousRemotes[name] = now()
                 UPF.State.BlockedEvents = (UPF.State.BlockedEvents or 0) + 1
-                warn("[UPF.Smart] high remote activity:", name, "count:", entry.count)
+                smart_log(name, "high remote activity (round count "..tostring(entry.count)..")")
             end
             if select("#", ...) > 25 then
                 SuspiciousRemotes[name] = now()
                 UPF.State.BlockedEvents = (UPF.State.BlockedEvents or 0) + 1
-                warn("[UPF.Smart] large remote payload:", name, "args:", select("#", ...))
+                smart_log(name, "large remote payload")
             end
         end)
     end)
@@ -269,7 +249,7 @@ local function scanAndAttachMonitors()
     end
 end
 
--- Loop principal
+-- Heartbeat loop (safe)
 UPF.Connections = UPF.Connections or {}
 if UPF.Connections.SmartProtection then
     pcall(function() UPF.Connections.SmartProtection:Disconnect() end)
@@ -278,20 +258,16 @@ end
 
 UPF.Connections.SmartProtection = RunService.Heartbeat:Connect(function(dt)
     if not UPF.State then return end
-    -- actualizar modo si cambió externamente
     State.mode = UPF.State.SmartMode or State.mode
-
     pcall(checkOtherPlayers)
     pcall(trackMovement)
-    pcall(maintainHealth)
-
-    -- escaneo ligero de remotes ocasional
-    if math.random() < 0.03 then
+    -- ocasional escaneo (baja probabilidad para reducir carga)
+    if math.random() < 0.01 then
         pcall(scanAndAttachMonitors)
     end
 end)
 
--- inicializar
+-- initialize monitors
 pcall(function() monitorRemotes(Workspace) end)
 pcall(function() monitorRemotes(game:GetService("ReplicatedStorage")) end)
 pcall(function() scanAndAttachMonitors() end)
