@@ -31,6 +31,11 @@ local MODULES = {
     "module_ui_logs.lua",
 }
 
+UPF = {
+    Enabled = true
+}
+getgenv().UPF = UPF
+
 -- Settings
 local MAX_DOWNLOAD_RETRIES = 4
 local INITIAL_BACKOFF = 0.25
