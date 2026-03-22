@@ -1,3 +1,38 @@
+-- Autoinstalación para Delta Android
+local function autoinstall()
+    local target_path = "/storage/emulated/0/Delta/Autoexecute/loader.lua"
+    
+    -- Comprobar si ya existe (para no sobrescribir cada vez)
+    local exists = pcall(readfile, target_path)
+    if exists then
+        print("[loader] Ya instalado en " .. target_path)
+        return
+    end
+    
+    -- Obtener el código fuente del script actual
+    -- En algunos ejecutores, la variable 'script' contiene el código.
+    -- Usamos una forma simple: cargamos el propio script desde la memoria.
+    -- Nota: Esto asume que el script fue ejecutado desde una fuente que podemos leer.
+    -- Alternativa confiable: usar game:HttpGet para descargar el script desde GitHub.
+    
+    -- Para evitar complicaciones, usamos descarga desde GitHub (recomendado)
+    local url = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/loader.lua"
+    local success, source = pcall(game.HttpGet, game, url)
+    if success and source then
+        local write_ok, err = pcall(writefile, target_path, source)
+        if write_ok then
+            print("[loader] Autoinstalado correctamente en " .. target_path)
+            print("[loader] A partir de ahora se ejecutará solo al inyectar Delta.")
+        else
+            warn("[loader] Error al escribir: " .. tostring(err))
+        end
+    else
+        warn("[loader] No se pudo descargar el script desde GitHub. Verifica tu conexión.")
+    end
+end
+
+autoinstall()
+
 -- loader_v4.lua
 -- Advanced UPF loader v4
 -- Features:
