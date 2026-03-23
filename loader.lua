@@ -1,33 +1,70 @@
--- Autoinstalación para Delta Android
+-- Autoinstalación mejorada para Delta Android
 local function autoinstall()
-    local target_path = "/storage/emulated/0/Delta/Autoexecute/loader.lua"
+    local target_dir = "/storage/emulated/0/Delta/Autoexecute/"
+    local target_file = target_dir .. "loader.lua"
     
-    -- Comprobar si ya existe (para no sobrescribir cada vez)
-    local exists = pcall(readfile, target_path)
+    -- Verificar si ya existe
+    local exists, _ = pcall(readfile, target_file)
     if exists then
-        print("[loader] Ya instalado en " .. target_path)
+        print("[loader] ✅ Ya instalado en " .. target_file)
         return
     end
     
-    -- Obtener el código fuente del script actual
-    -- En algunos ejecutores, la variable 'script' contiene el código.
-    -- Usamos una forma simple: cargamos el propio script desde la memoria.
-    -- Nota: Esto asume que el script fue ejecutado desde una fuente que podemos leer.
-    -- Alternativa confiable: usar game:HttpGet para descargar el script desde GitHub.
+    print("[loader] Intentando autoinstalar...")
     
-    -- Para evitar complicaciones, usamos descarga desde GitHub (recomendado)
+    -- 1. Verificar si la carpeta existe (intentando listar archivos)
+    local folder_exists, files = pcall(listfiles, target_dir)
+    if not folder_exists then
+        warn("[loader] ❌ La carpeta no existe o no es accesible: " .. target_dir)
+        warn("[loader] Crea la carpeta manualmente o verifica la ruta correcta.")
+        return
+    end
+    print("[loader] ✅ Carpeta existe. Contenido: " .. (#files or 0) .. " archivos")
+    
+    -- 2. Probar escritura con un archivo temporal
+    local test_file = target_dir .. "_test_write.tmp"
+    local write_test, err = pcall(writefile, test_file, "test")
+    if not write_test then
+        warn("[loader] ❌ No se puede escribir en la carpeta. Error: " .. tostring(err))
+        warn("[loader] Asegúrate de que Delta tenga permisos de almacenamiento.")
+        return
+    end
+    pcall(delfile, test_file) -- limpiar
+    print("[loader] ✅ Permisos de escritura OK")
+    
+    -- 3. Obtener el código fuente para guardar
+    local source = nil
+    
+    -- Intento A: descargar desde GitHub
     local url = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/loader.lua"
-    local success, source = pcall(game.HttpGet, game, url)
-    if success and source then
-        local write_ok, err = pcall(writefile, target_path, source)
-        if write_ok then
-            print("[loader] Autoinstalado correctamente en " .. target_path)
-            print("[loader] A partir de ahora se ejecutará solo al inyectar Delta.")
-        else
-            warn("[loader] Error al escribir: " .. tostring(err))
-        end
+    local download_ok, content = pcall(game.HttpGet, game, url)
+    if download_ok and content and #content > 0 then
+        source = content
+        print("[loader] ✅ Script descargado desde GitHub")
     else
-        warn("[loader] No se pudo descargar el script desde GitHub. Verifica tu conexión.")
+        -- Intento B: usar el código que ya está en memoria (si está disponible)
+        -- En algunos entornos, el código fuente está en una variable como ... o en script.Source
+        if script and script.Source then
+            source = script.Source
+            print("[loader] ✅ Script obtenido desde script.Source")
+        elseif ... then
+            source = (...):sub(1, -1)
+            print("[loader] ✅ Script obtenido desde ...")
+        end
+    end
+    
+    if not source then
+        warn("[loader] ❌ No se pudo obtener el código fuente. Verifica tu conexión a internet.")
+        return
+    end
+    
+    -- 4. Escribir el archivo
+    local write_ok, write_err = pcall(writefile, target_file, source)
+    if write_ok then
+        print("[loader] ✅ Autoinstalado correctamente en " .. target_file)
+        print("[loader] 🚀 A partir de ahora se ejecutará solo al inyectar Delta.")
+    else
+        warn("[loader] ❌ Error al escribir: " .. tostring(write_err))
     end
 end
 
