@@ -18,6 +18,10 @@ local MODULES = {
     "module_ui_theme.lua",
     "module_ui.lua",
     "module_ui_logs.lua",
+    "module_antikick.lua",
+    "module_behavior_analyzer.lua",
+    "module_admin_detector.lua",
+    "module_decision_engine.lua",
 }
 
 for _, name in ipairs(modules) do
