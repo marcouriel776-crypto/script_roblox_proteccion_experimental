@@ -76,4 +76,25 @@ function UPF:Shutdown()
     end)
 end
 
+game:GetService("RunService").Heartbeat:Connect(function()
+    local char = game.Players.LocalPlayer.Character
+
+    if UPF.Analyzer then
+        UPF.Analyzer:TrackCharacter(char)
+        UPF.Analyzer:Evaluate()
+    end
+
+    if UPF.Admin then
+        UPF.Admin:Check()
+    end
+
+    if UPF.Brain then
+        UPF.Brain:Tick()
+    end
+
+    if UPF.Resilience and not UPF.SafeMode then
+        UPF.Resilience:Check(char)
+    end
+end)
+
 print("✅ Core initialized")
