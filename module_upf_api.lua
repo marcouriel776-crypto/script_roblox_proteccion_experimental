@@ -1,21 +1,20 @@
 -- module_upf_api.lua
--- Small safe API bootstrap for UPF.
--- Creates _G.UPF and safe no-op stubs so UI can call methods before modules that define full implementations load.
--- Real modules (module_recovery, module_protection, etc.) can overwrite these methods.
-
-local HttpService = game:GetService("HttpService")
+-- UPF API bootstrap (clean version)
+-- Proporciona funciones seguras (stubs) para que la UI no falle
+-- NO incluye reconnect ni teleport
 
 _G.UPF = _G.UPF or {}
 local UPF = _G.UPF
 
--- basic state tables
+-- Tablas base
 UPF.State = UPF.State or {}
 UPF.Settings = UPF.Settings or {}
+UPF.Connections = UPF.Connections or {}
 
--- safe stubs: they won't error if UI calls them early
-local function noop(...) return nil end
+-- =========================
+-- Helpers
+-- =========================
 
--- Helper to create toggles that update state and print
 local function makeToggleStub(stateKey, niceName)
     return function(self, on)
         if on == nil then
@@ -23,50 +22,86 @@ local function makeToggleStub(stateKey, niceName)
         else
             UPF.State[stateKey] = (on and true) or false
         end
-        print(("UPF (stub): %s -> %s"):format(niceName or stateKey, tostring(UPF.State[stateKey])))
+
+        print(("UPF (stub): %s -> %s"):format(
+            niceName or stateKey,
+            tostring(UPF.State[stateKey])
+        ))
+
         return UPF.State[stateKey]
     end
 end
 
--- Provide safe methods (these will be overwritten by real modules that implement them)
-if not UPF.ToggleProtection then UPF.ToggleProtection = makeToggleStub("ProtectionEnabled", "Protection") end
-if not UPF.ToggleGodMode then UPF.ToggleGodMode = makeToggleStub("GodMode", "GodMode") end
+-- =========================
+-- STUBS SEGUROS
+-- =========================
+
+if not UPF.ToggleProtection then
+    UPF.ToggleProtection = makeToggleStub("ProtectionEnabled", "Protection")
+end
+
+if not UPF.ToggleGodMode then
+    UPF.ToggleGodMode = makeToggleStub("GodMode", "GodMode")
+end
+
 if not UPF.ReturnToSafePoint then
     UPF.ReturnToSafePoint = function()
-        print("UPF (stub): ReturnToSafePoint called - no-op (real impl not loaded yet).")
+        print("UPF (stub): ReturnToSafePoint (no impl yet)")
     end
 end
+
 if not UPF.RecoverPlayer then
     UPF.RecoverPlayer = function()
-        print("UPF (stub): RecoverPlayer called - no-op (real impl not loaded yet).")
+        print("UPF (stub): RecoverPlayer (no impl yet)")
     end
 end
-if not UPF.ToggleAudioShield then UPF.ToggleAudioShield = function() UPF.State.Audio = UPF.State.Audio or {}; UPF.State.Audio.Enabled = not (UPF.State.Audio.Enabled); print("UPF (stub): ToggleAudioShield ->", UPF.State.Audio.Enabled) end end
-if not UPF.SetAudioShieldRadius then UPF.SetAudioShieldRadius = function(r) UPF.State.Audio = UPF.State.Audio or {}; UPF.State.Audio.Radius = tonumber(r) or UPF.State.Audio.Radius or 20; print("UPF (stub): SetAudioShieldRadius ->", UPF.State.Audio.Radius) end end
-if not UPF.SetAudioShieldLevel then UPF.SetAudioShieldLevel = function(l) UPF.State.Audio = UPF.State.Audio or {}; UPF.State.Audio.Level = tonumber(l) or UPF.State.Audio.Level or 0.25; print("UPF (stub): SetAudioShieldLevel ->", UPF.State.Audio.Level) end end
-if not UPF.SaveSettings then UPF.SaveSettings = function() print("UPF (stub): SaveSettings called (no filesystem available in stub).") end end
 
--- Expose a container for connection references (modules may use it)
-UPF.Connections = UPF.Connections or {}
+-- Audio Shield
+if not UPF.ToggleAudioShield then
+    UPF.ToggleAudioShield = function()
+        UPF.State.Audio = UPF.State.Audio or {}
+        UPF.State.Audio.Enabled = not (UPF.State.Audio.Enabled)
 
-print("✅ module_upf_api loaded (stubs in place). Real implementations will override these when available.")
+        print("UPF (stub): AudioShield ->", UPF.State.Audio.Enabled)
+    end
+end
 
--- al final de module_upf_api.lua, expone flags de control
-UPF.State = UPF.State or {}
+if not UPF.SetAudioShieldRadius then
+    UPF.SetAudioShieldRadius = function(r)
+        UPF.State.Audio = UPF.State.Audio or {}
+        UPF.State.Audio.Radius = tonumber(r) or 20
+
+        print("UPF (stub): Audio Radius ->", UPF.State.Audio.Radius)
+    end
+end
+
+if not UPF.SetAudioShieldLevel then
+    UPF.SetAudioShieldLevel = function(l)
+        UPF.State.Audio = UPF.State.Audio or {}
+        UPF.State.Audio.Level = tonumber(l) or 0.25
+
+        print("UPF (stub): Audio Level ->", UPF.State.Audio.Level)
+    end
+end
+
+-- Guardado
+if not UPF.SaveSettings then
+    UPF.SaveSettings = function()
+        print("UPF (stub): SaveSettings (no filesystem)")
+    end
+end
+
+-- =========================
+-- FLAGS IMPORTANTES
+-- =========================
+
+-- SOLO RECOVERY LOCAL
 UPF.State.Resilience = UPF.State.Resilience or {}
--- por seguridad, por defecto NO permitir Auto-Reconnect hasta que el usuario lo habilite
-if UPF.State.Resilience.allow_reconnect == nil then
-    UPF.State.Resilience.allow_reconnect = false
-end
 
--- Guardar stub AttemptReconnect sólo si no existe (pero NO realiza Teleport por defecto)
-if not UPF.Resilience then UPF.Resilience = {} end
-if not UPF.Resilience.AttemptReconnect then
-    UPF.Resilience.AttemptReconnect = function()
-        print("UPF (stub) AttemptReconnect called but allow_reconnect is", UPF.State.Resilience.allow_reconnect)
-        if UPF.State.Resilience.allow_reconnect then
-            print("UPF (stub) allow_reconnect=true but real implementation may override this.")
-        end
-        return false, "stub_block"
-    end
-end
+-- Esto ahora SOLO controla el sistema de anti-stuck
+UPF.State.Resilience.enabled = (UPF.State.Resilience.enabled ~= false)
+
+-- NO reconnect, NO teleport
+UPF.State.Resilience.allow_reconnect = false
+
+print("✅ module_upf_api loaded (clean, no reconnect)")
