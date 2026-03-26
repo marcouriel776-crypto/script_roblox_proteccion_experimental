@@ -1,151 +1,282 @@
--- module_ui.lua (FINAL FIXED)
+-- module_ui.lua (FINAL CLEAN - MOBILE SAFE)
 
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
 
-local LocalPlayer = Players.LocalPlayer
-
-_G.UPF = _G.UPF or {}
-local UPF = _G.UPF
-
-UPF.State = UPF.State or {}
-UPF.Connections = UPF.Connections or {}
+local player = Players.LocalPlayer
 
 -- =========================
--- CLEANUP PREVIO
+-- GUI ROOT
 -- =========================
 
-if UPF.Connections.UIStatus then
-	pcall(function() UPF.Connections.UIStatus:Disconnect() end)
-	UPF.Connections.UIStatus = nil
+local gui = Instance.new("ScreenGui")
+gui.Name = "UPF_UI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+
+-- =========================
+-- MAIN FRAME
+-- =========================
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 260, 0, 300)
+frame.Position = UDim2.new(0.5, -130, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+-- =========================
+-- TITLE BAR (DRAG)
+-- =========================
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "UPF PANEL"
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+title.Parent = frame
+
+-- =========================
+-- DRAG SYSTEM (PC + MOBILE)
+-- =========================
+
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	frame.Position = UDim2.new(
+		startPos.X.Scale,
+		startPos.X.Offset + delta.X,
+		startPos.Y.Scale,
+		startPos.Y.Offset + delta.Y
+	)
 end
 
-local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+title.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
 
-local function destroyIfExists(parent, name)
-	if parent then
-		local existing = parent:FindFirstChild(name)
-		if existing then
-			existing:Destroy()
-		end
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
 	end
-end
+end)
 
-destroyIfExists(playerGui, "ProtectionUI")
-destroyIfExists(CoreGui, "ProtectionUI")
+title.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+	or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
 
--- =========================
--- UI BASE
--- =========================
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ProtectionUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.Parent = playerGui
-
-local Main = Instance.new("Frame")
-Main.Size = UDim2.fromScale(0.42, 0.30)
-Main.Position = UDim2.fromScale(0.29, 0.34)
-Main.BackgroundColor3 = Color3.fromRGB(18, 18, 28)
-Main.BorderSizePixel = 0
-Main.Parent = ScreenGui
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 14)
-
-local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 42)
-Header.BackgroundColor3 = Color3.fromRGB(28, 28, 42)
-Header.Parent = Main
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 14)
-
-local Content = Instance.new("Frame")
-Content.Position = UDim2.new(0, 0, 0, 42)
-Content.Size = UDim2.new(1, 0, 1, -42)
-Content.BackgroundTransparency = 1
-Content.Parent = Main
-
-local UIList = Instance.new("UIListLayout")
-UIList.Parent = Content
-UIList.Padding = UDim.new(0, 8)
-UIList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIS.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
+end)
 
 -- =========================
--- ORDEN FIJO (FIX)
+-- BUTTON CONTAINER
 -- =========================
 
-local ORDER = 0
-local function nextOrder()
-	ORDER += 1
-	return ORDER
-end
+local container = Instance.new("Frame")
+container.Size = UDim2.new(1, 0, 1, -50)
+container.Position = UDim2.new(0, 0, 0, 45)
+container.BackgroundTransparency = 1
+container.Parent = frame
+
+local layout = Instance.new("UIListLayout")
+layout.Parent = container
+layout.Padding = UDim.new(0, 10)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
 -- =========================
--- ELEMENTOS
+-- TOGGLE BUTTON CREATOR
 -- =========================
 
-local function makeButton(text, bg)
+local function createToggle(name, callback)
+	local state = false
+
 	local btn = Instance.new("TextButton")
-	btn.Size = UDim2.new(0.72, 0, 0, 34)
-	btn.BackgroundColor3 = bg
-	btn.Text = text
-	btn.LayoutOrder = nextOrder()
-	btn.Parent = Content
-	Instance.new("UICorner", btn)
+	btn.Size = UDim2.new(0.8, 0, 0, 45)
+	btn.Text = name .. " [OFF]"
+	btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Parent = container
+
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+
+	btn.MouseButton1Click:Connect(function()
+		state = not state
+
+		if state then
+			btn.Text = name .. " [ON]"
+			btn.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+		else
+			btn.Text = name .. " [OFF]"
+			btn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+		end
+
+		if callback then
+			callback(state)
+		end
+	end)
+
 	return btn
 end
 
-local InfoLabel = Instance.new("TextLabel")
-InfoLabel.Size = UDim2.new(0.92, 0, 0, 22)
-InfoLabel.BackgroundTransparency = 1
-InfoLabel.Text = "FPS: --"
-InfoLabel.LayoutOrder = nextOrder()
-InfoLabel.Parent = Content
-
-local ProtectionButton = makeButton("Enable Protection", Color3.fromRGB(70,100,240))
-local GodButton = makeButton("God Mode", Color3.fromRGB(120,70,70))
-local ReturnButton = makeButton("Return Safe", Color3.fromRGB(70,150,120))
-local AudioButton = makeButton("Audio Shield", Color3.fromRGB(110,110,150))
-
 -- =========================
--- LOGIC
+-- BUTTONS
 -- =========================
 
-local function update()
-	InfoLabel.Text = "FPS: " .. tostring(UPF.State.FPS or "--")
+createToggle("Protection", function(v)
+	if _G.UPF and _G.UPF.API then
+		_G.UPF.API:ToggleProtection(v)
+	end
+end)
+
+createToggle("God Mode", function(v)
+	if _G.UPF and _G.UPF.API then
+		_G.UPF.API:ToggleGodMode(v)
+	end
+end)
+
+local returnBtn = Instance.new("TextButton")
+returnBtn.Size = UDim2.new(0.8, 0, 0, 45)
+returnBtn.Text = "Return Safe"
+returnBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 200)
+returnBtn.TextColor3 = Color3.new(1,1,1)
+returnBtn.Parent = container
+Instance.new("UICorner", returnBtn)
+
+returnBtn.MouseButton1Click:Connect(function()
+	if _G.UPF and _G.UPF.API then
+		_G.UPF.API:ReturnToSafePoint()
+	end
+end)
+
+createToggle("Audio Shield", function(v)
+	if _G.UPF and _G.UPF.API then
+		_G.UPF.API:ToggleAudioShield(v)
+	end
+end)
+
+-- =========================
+-- CLOSE BUTTON (KILL SCRIPT)
+-- =========================
+
+local close = Instance.new("TextButton")
+close.Size = UDim2.new(0, 30, 0, 30)
+close.Position = UDim2.new(1, -35, 0, 5)
+close.Text = "X"
+close.BackgroundColor3 = Color3.fromRGB(170, 50, 50)
+close.TextColor3 = Color3.new(1,1,1)
+close.Parent = frame
+
+close.MouseButton1Click:Connect(function()
+	if _G.UPF then
+		_G.UPF.Enabled = false
+	end
+
+	gui:Destroy()
+end)
+
+-- =========================
+-- FLOATING BUTTON (OPEN/CLOSE UI)
+-- =========================
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0, 50, 0, 50)
+toggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
+toggleBtn.Text = "UPF"
+toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.Parent = gui
+
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+
+local uiVisible = true
+
+toggleBtn.MouseButton1Click:Connect(function()
+	uiVisible = not uiVisible
+	frame.Visible = uiVisible
+end)
+
+-- =========================
+-- DRAG FLOAT BUTTON
+-- =========================
+
+local draggingBtn, dragInputBtn, dragStartBtn, startPosBtn
+
+local function updateBtn(input)
+	local delta = input.Position - dragStartBtn
+	toggleBtn.Position = UDim2.new(
+		startPosBtn.X.Scale,
+		startPosBtn.X.Offset + delta.X,
+		startPosBtn.Y.Scale,
+		startPosBtn.Y.Offset + delta.Y
+	)
 end
 
-ProtectionButton.MouseButton1Click:Connect(function()
-	if UPF.ToggleProtection then
-		UPF:ToggleProtection()
+toggleBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch
+	or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		
+		draggingBtn = true
+		dragStartBtn = input.Position
+		startPosBtn = toggleBtn.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				draggingBtn = false
+			end
+		end)
 	end
 end)
 
-GodButton.MouseButton1Click:Connect(function()
-	if UPF.ToggleGodMode then
-		UPF:ToggleGodMode()
+toggleBtn.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Touch
+	or input.UserInputType == Enum.UserInputType.MouseMovement then
+		dragInputBtn = input
 	end
 end)
 
-ReturnButton.MouseButton1Click:Connect(function()
-	if UPF.ReturnToSafePoint then
-		UPF:ReturnToSafePoint()
-	end
-end)
-
-AudioButton.MouseButton1Click:Connect(function()
-	if UPF.ToggleAudioShield then
-		UPF:ToggleAudioShield()
+UIS.InputChanged:Connect(function(input)
+	if input == dragInputBtn and draggingBtn then
+		updateBtn(input)
 	end
 end)
 
 -- =========================
--- LOOP
+-- FPS COUNTER
 -- =========================
 
-UPF.Connections.UIStatus = RunService.RenderStepped:Connect(function(dt)
-	UPF.State.FPS = math.floor(1 / dt)
-	update()
+local fpsLabel = Instance.new("TextLabel")
+fpsLabel.Size = UDim2.new(1, 0, 0, 20)
+fpsLabel.Position = UDim2.new(0, 0, 1, -20)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.TextColor3 = Color3.new(1,1,1)
+fpsLabel.Parent = frame
+
+local last = tick()
+local frames = 0
+
+RunService.RenderStepped:Connect(function()
+	frames += 1
+	if tick() - last >= 1 then
+		fpsLabel.Text = "FPS: " .. frames
+		frames = 0
+		last = tick()
+	end
 end)
 
-print("✅ UI FIXED loaded")
+print("✅ UPF UI loaded (mobile safe, draggable, toggleable)")
