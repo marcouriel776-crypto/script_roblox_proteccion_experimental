@@ -7,7 +7,7 @@ mt.__namecall = newcclosure(function(self, ...)
     local method = getnamecallmethod()
 
     if method == "Kick" then
-        warn("[AntiKick] Kick bloqueado")
+        warn("[UPF] Kick bloqueado (seguro)")
         return nil
     end
 
@@ -15,3 +15,5 @@ mt.__namecall = newcclosure(function(self, ...)
 end)
 
 setreadonly(mt, true)
+
+print("AntiKick v2 loaded")
