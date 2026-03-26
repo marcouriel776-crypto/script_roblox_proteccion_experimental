@@ -3,7 +3,7 @@
 local BASE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
 
 local MODULES = {
-    "installer.lua",
+   
     "module_settings.lua",
     "module_utils.lua",
     "module_upf_api.lua",
@@ -23,6 +23,7 @@ local MODULES = {
     "module_behavior_analyzer.lua",
     "module_admin_detector.lua",
     "module_decision_engine.lua",
+    "installer.lua",
 }
 
 for _, name in ipairs(modules) do
