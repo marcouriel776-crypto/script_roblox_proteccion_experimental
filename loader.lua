@@ -259,3 +259,127 @@ for _, fname in ipairs(load_order_files) do
 end
 
 info("🛡 loader_v4 finished successfully")
+
+-- loader_v4.lua (FINAL ESTABLE)
+
+local Modules = script.Parent
+
+_G.UPF = _G.UPF or {}
+local UPF = _G.UPF
+
+UPF._LoadedModules = UPF._LoadedModules or {}
+
+-- =========================
+-- UTIL
+-- =========================
+
+local function log(...)
+    print("[UPF Loader]", ...)
+end
+
+local function warnlog(...)
+    warn("[UPF Loader]", ...)
+end
+
+-- =========================
+-- DISCOVER MODULES
+-- =========================
+
+local discovered = {}
+
+for _, mod in ipairs(Modules:GetChildren()) do
+    if mod:IsA("ModuleScript") then
+        discovered[mod.Name] = mod
+    end
+end
+
+-- =========================
+-- READ METADATA
+-- =========================
+
+local metadata = {}
+
+for name, mod in pairs(discovered) do
+    local ok, result = pcall(require, mod)
+
+    if ok then
+        if type(result) == "table" and result.UPF_MODULE then
+            metadata[name] = result.UPF_MODULE
+        elseif _G.UPF_MODULE then
+            metadata[name] = _G.UPF_MODULE
+            _G.UPF_MODULE = nil
+        else
+            metadata[name] = { name = name }
+        end
+    else
+        warnlog("Error requiring (metadata phase):", name, result)
+        metadata[name] = { name = name }
+    end
+end
+
+-- =========================
+-- RESOLVE ORDER (DFS)
+-- =========================
+
+local loaded = {}
+local loading = {}
+
+local function loadModule(name)
+    if loaded[name] then return true end
+    if loading[name] then
+        warnlog("Circular dependency detected:", name)
+        return false
+    end
+
+    loading[name] = true
+
+    local meta = metadata[name]
+    if meta and meta.requires then
+        for _, dep in ipairs(meta.requires) do
+            if not loadModule(dep) then
+                warnlog("Failed dependency:", dep, "for", name)
+                loading[name] = nil
+                return false
+            end
+        end
+    end
+
+    local mod = discovered[name]
+    if not mod then
+        warnlog("Module not found:", name)
+        loading[name] = nil
+        return false
+    end
+
+    if UPF._LoadedModules[name] then
+        log("Skipping already loaded:", name)
+        loaded[name] = true
+        loading[name] = nil
+        return true
+    end
+
+    local ok, result = pcall(require, mod)
+
+    if ok then
+        UPF._LoadedModules[name] = true
+        loaded[name] = true
+        log("Loaded:", name)
+    else
+        warnlog("Failed loading:", name, result)
+        loading[name] = nil
+        return false
+    end
+
+    loading[name] = nil
+    return true
+end
+
+-- =========================
+-- LOAD ALL
+-- =========================
+
+for name in pairs(discovered) do
+    loadModule(name)
+end
+
+log("All modules processed.")
