@@ -30,6 +30,16 @@ UPF.State.FlingEvents = UPF.State.FlingEvents or 0
 UPF.Character = nil
 UPF.Humanoid = nil
 UPF.RootPart = nil
+UPF.SafeMode = false
+UPF.Throttle = false
+
+if UPF.SafeMode then
+    return -- no hacer nada
+end
+
+if UPF.Throttle then
+    task.wait(0.2)
+end
 
 local LocalPlayer = Players.LocalPlayer
 
