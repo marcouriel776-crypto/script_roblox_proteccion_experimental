@@ -26,20 +26,6 @@ local MODULES = {
     "installer.lua",
 }
 
-for _, name in ipairs(modules) do
-    print("[loader_v4] Loading", name)
-
-    local success, result = pcall(function()
-        return loadstring(readfile(name))()
-    end)
-
-    if success then
-        print("[loader_v4] Loaded:", name)
-    else
-        warn("[loader_v4] Error en", name, result)
-    end
-end
-
 -- =========================
 -- BASE GLOBAL
 -- =========================
