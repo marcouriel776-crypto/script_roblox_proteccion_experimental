@@ -127,4 +127,22 @@ UPF.Connections.Resilience = RunService.Heartbeat:Connect(function()
 	pcall(checkStuck)
 end)
 
+function UPF.Resilience:Check(character)
+    if not character then return end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local velocity = root.Velocity.Magnitude
+
+    if velocity < 1 and tick() - lastRecovery > 5 then
+        lastRecovery = tick()
+        root.CFrame = root.CFrame + Vector3.new(0, 5, 0)
+    end
+end
+
+if UPF.Resilience and type(UPF.Resilience.Check) == "function" then
+    UPF.Resilience:Check(char)
+end
+
 print("✅ module_resilience FINAL loaded")
