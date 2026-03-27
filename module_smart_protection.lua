@@ -12,7 +12,7 @@ UPF.State = UPF.State or {}
 UPF.State.Smart = UPF.State.Smart or {}
 local State = UPF.State.Smart
 
-State.max_distance_per_frame = 35
+State.max_distance_per_frame = 80
 State.player_velocity_threshold = 140
 
 -- =========================
