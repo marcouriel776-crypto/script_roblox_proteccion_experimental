@@ -1,4 +1,4 @@
--- module_resilience.lua (FINAL POLISHED)
+-- module_resilience.lua (FINAL PRO STABLE)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -13,6 +13,10 @@ UPF.State.Resilience = UPF.State.Resilience or {}
 
 local RES = UPF.State.Resilience
 
+-- =========================
+-- STATE
+-- =========================
+
 RES.paused = RES.paused or false
 RES.stuckTime = RES.stuckTime or 6
 RES.lastRecovery = RES.lastRecovery or 0
@@ -20,10 +24,14 @@ RES.lastMoveTick = RES.lastMoveTick or tick()
 RES.lastPos = RES.lastPos or nil
 RES.lastStuckTrigger = RES.lastStuckTrigger or 0
 
--- 🔥 nuevo: cooldown anti-loop
+-- anti-loop cooldown
 RES.stuckCooldown = RES.stuckCooldown or 8
 
 UPF.Resilience = UPF.Resilience or {}
+
+-- =========================
+-- HELPERS
+-- =========================
 
 local function getRoot()
 	local char = LocalPlayer and LocalPlayer.Character
@@ -34,6 +42,7 @@ local function localRecover()
 	local root = getRoot()
 	if not root then return end
 
+	-- cooldown anti spam
 	if tick() - RES.lastRecovery < 2 then return end
 	RES.lastRecovery = tick()
 
@@ -53,6 +62,10 @@ local function localRecover()
 	print("[resilience] local recovery executed")
 end
 
+-- =========================
+-- API
+-- =========================
+
 function UPF.Resilience.Pause()
 	RES.paused = true
 	print("[resilience] paused")
@@ -66,6 +79,25 @@ end
 function UPF.Resilience.AttemptRecovery()
 	localRecover()
 end
+
+-- compatibilidad externa (opcional)
+function UPF.Resilience:Check(character)
+	if not character then return end
+
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+
+	local velocity = root.Velocity.Magnitude
+
+	if velocity < 1 and tick() - RES.lastRecovery > 5 then
+		RES.lastRecovery = tick()
+		root.CFrame = root.CFrame + Vector3.new(0, 5, 0)
+	end
+end
+
+-- =========================
+-- CORE LOGIC
+-- =========================
 
 local function checkStuck()
 	if RES.paused then return end
@@ -88,12 +120,13 @@ local function checkStuck()
 		local dist = (pos - RES.lastPos).Magnitude
 
 		if dist > 0.5 or vel > 1 then
+			-- jugador se movió
 			RES.lastMoveTick = tick()
 		else
 			local now = tick()
 
 			if now - RES.lastMoveTick >= RES.stuckTime then
-				-- 🔥 evitar spam infinito
+				-- evitar spam infinito
 				if now - RES.lastStuckTrigger >= RES.stuckCooldown then
 					RES.lastStuckTrigger = now
 					print("[resilience] Player appears stuck → recovering")
@@ -127,22 +160,4 @@ UPF.Connections.Resilience = RunService.Heartbeat:Connect(function()
 	pcall(checkStuck)
 end)
 
-function UPF.Resilience:Check(character)
-    if not character then return end
-
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    local velocity = root.Velocity.Magnitude
-
-    if velocity < 1 and tick() - lastRecovery > 5 then
-        lastRecovery = tick()
-        root.CFrame = root.CFrame + Vector3.new(0, 5, 0)
-    end
-end
-
-if UPF.Resilience and type(UPF.Resilience.Check) == "function" then
-    UPF.Resilience:Check(char)
-end
-
-print("✅ module_resilience FINAL loaded")
+print("✅ module_resilience FINAL PRO loaded")
