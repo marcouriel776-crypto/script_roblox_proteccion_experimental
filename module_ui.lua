@@ -220,7 +220,7 @@ Credits.BackgroundTransparency = 1
 Credits.Font = Enum.Font.Gotham
 Credits.TextScaled = true
 Credits.TextColor3 = Color3.fromRGB(170,170,190)
-Credits.Text = "UPF Protection Framework | Author: Uriel Reich"
+Credits.Text = "UPF Protection Framework | Author: Sourcerer"
 Credits.TextXAlignment = Enum.TextXAlignment.Center
 
 -- Floating button (aparece al minimizar)
