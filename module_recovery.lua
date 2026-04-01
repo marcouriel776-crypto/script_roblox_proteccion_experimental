@@ -127,4 +127,31 @@ function UPF:ReturnToSafePoint()
 
 end
 
+---------------------------------------------------
+-- ANTI TELEPORT SYSTEM
+---------------------------------------------------
+
+local lastPosition = nil
+
+RunService.Heartbeat:Connect(function()
+    local character = player.Character
+    if not character then return end
+
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local current = root.Position
+
+    if lastPosition then
+        local distance = (current - lastPosition).Magnitude
+
+        if distance > 60 then
+            task.wait(0.05)
+            root.CFrame = CFrame.new(lastPosition)
+            print("🚫 AntiTeleport: reverted")
+        end
+    end
+
+    lastPosition = current
+end)
 print("✅ module_recovery loaded")
