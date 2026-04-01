@@ -1,43 +1,41 @@
--- =========================
--- SAFE MOVEMENT
--- =========================
+-- module_smart_protection.lua (SAFE VERSION)
 
-local LastPos = nil
-local SafePoint = nil
-local lastRollback = 0
-local rollbackCooldown = 1.5
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
-local function trackMovement()
-	local char = LocalPlayer.Character
-	if not char then return end
+local LocalPlayer = Players.LocalPlayer
 
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	local hum = char:FindFirstChildOfClass("Humanoid")
-	if not hrp or not hum then return end
+_G.UPF = _G.UPF or {}
+local UPF = _G.UPF
 
-	-- ignorar cuando estás en el aire
-	if hum.FloorMaterial == Enum.Material.Air then
-		LastPos = hrp.Position
-		return
-	end
+UPF.State = UPF.State or {}
+UPF.State.Smart = UPF.State.Smart or {}
 
-	local vel = hrp.AssemblyLinearVelocity.Magnitude
+local function checkPlayers()
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer and plr.Character then
+			local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+			if hrp then
+				local vel = hrp.AssemblyLinearVelocity.Magnitude
 
-	if vel < 10 then
-		SafePoint = hrp.CFrame
-	end
-
-	if LastPos then
-		local dist = (hrp.Position - LastPos).Magnitude
-
-		if dist > State.max_distance_per_frame then
-			if SafePoint and tick() - lastRollback > rollbackCooldown then
-				lastRollback = tick()
-				hrp.CFrame = SafePoint
-				warn("[UPF] Safe rollback")
+				if vel > 150 then
+					warn("[UPF] ⚠️ Possible flinger:", plr.Name)
+				end
 			end
 		end
 	end
-
-	LastPos = hrp.Position
 end
+
+UPF.Connections = UPF.Connections or {}
+
+if UPF.Connections.Smart then
+	pcall(function()
+		UPF.Connections.Smart:Disconnect()
+	end)
+end
+
+UPF.Connections.Smart = RunService.Heartbeat:Connect(function()
+	pcall(checkPlayers)
+end)
+
+print("✅ Smart Protection (no conflict) loaded")
