@@ -1,110 +1,62 @@
--- module_core.lua (UPF Core)
-if _G.UPF and _G.UPF.CoreLoaded then
-    warn("UPF Core already loaded.")
-    return
-end
+-- module_core.lua (FIXED STABLE)
+
+local Players = game:GetService("Players")
+
+local LocalPlayer = Players.LocalPlayer
 
 _G.UPF = _G.UPF or {}
 local UPF = _G.UPF
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-
-UPF.CoreLoaded = true
-UPF.Connections = UPF.Connections or {}
 UPF.State = UPF.State or {}
-UPF.Settings = UPF.Settings or {}
+UPF.Connections = UPF.Connections or {}
 
--- default state
 UPF.State.ScriptRunning = true
-UPF.State.ProtectionEnabled = UPF.Settings.protection_enabled or false
-UPF.State.ProtectionManualOverride = UPF.Settings.protection_manual_override
-UPF.State.GodModeEnabled = UPF.Settings.godmode_enabled or false
-UPF.State.SmartMode = UPF.Settings.smart_mode or "SAFE"
-UPF.State.AutoReturnEnabled = UPF.Settings.auto_return_enabled or true
-UPF.State.ReturnCooldown = UPF.Settings.return_cooldown or 5
-UPF.State.LastAutoReturn = UPF.State.LastAutoReturn or 0
-UPF.State.FlingEvents = UPF.State.FlingEvents or 0
+UPF.State.ProtectionEnabled = true
 
-UPF.Character = nil
-UPF.Humanoid = nil
 UPF.RootPart = nil
-UPF.SafeMode = false
-UPF.Throttle = false
+UPF.Humanoid = nil
 
-if UPF.SafeMode then
-    return -- no hacer nada
-end
+-- =========================
+-- CHARACTER SETUP
+-- =========================
 
-if UPF.Throttle then
-    task.wait(0.2)
-end
+local function SetupCharacter(char)
 
-local LocalPlayer = Players.LocalPlayer
+    if not char then return end
 
-local function UpdateCharacter(char)
-    UPF.Character = char
-    UPF.Humanoid = char:FindFirstChild("Humanoid") or char:WaitForChild("Humanoid",5)
-    UPF.RootPart = char:FindFirstChild("HumanoidRootPart") or char:WaitForChild("HumanoidRootPart",5)
-end
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    local hum = char:WaitForChild("Humanoid", 5)
 
-if LocalPlayer.Character then UpdateCharacter(LocalPlayer.Character) end
-UPF.Connections.CharacterAdded = LocalPlayer.CharacterAdded:Connect(UpdateCharacter)
-
--- public API
-function UPF:ToggleProtection(on)
-    if on == nil then
-        self.State.ProtectionEnabled = not self.State.ProtectionEnabled
-    else
-        self.State.ProtectionEnabled = on
+    if not hrp or not hum then
+        warn("[UPF] Failed to get character parts")
+        return
     end
-    print("UPF:Protection ->", tostring(self.State.ProtectionEnabled))
-    if self.SaveSettings then pcall(function() self:SaveSettings() end) end
+
+    UPF.RootPart = hrp
+    UPF.Humanoid = hum
+
+    print("✅ Character loaded")
+
 end
 
-function UPF:Shutdown()
-    print("UPF:Shutting down...")
-    self.State.ScriptRunning = false
-    self.State.ProtectionEnabled = false
-    -- disconnect connections
-    for k, conn in pairs(self.Connections) do
-        pcall(function()
-            if type(conn) == "userdata" and conn.Disconnect then conn:Disconnect() end
-            self.Connections[k] = nil
-        end)
-    end
-    -- remove UI if exists (PlayerGui or CoreGui)
+-- =========================
+-- CHARACTER EVENTS
+-- =========================
+
+if UPF.Connections.CharacterAdded then
     pcall(function()
-        local plr = LocalPlayer
-        if plr and plr:FindFirstChild("PlayerGui") then
-            local g = plr.PlayerGui:FindFirstChild("ProtectionUI")
-            if g then g:Destroy() end
-        end
-        local cg = CoreGui:FindFirstChild("ProtectionUI")
-        if cg then cg:Destroy() end
+        UPF.Connections.CharacterAdded:Disconnect()
     end)
 end
 
-game:GetService("RunService").Heartbeat:Connect(function()
-    local char = game.Players.LocalPlayer.Character
-
-    if UPF.Analyzer then
-        UPF.Analyzer:TrackCharacter(char)
-        UPF.Analyzer:Evaluate()
-    end
-
-    if UPF.Admin then
-        UPF.Admin:Check()
-    end
-
-    if UPF.Brain then
-        UPF.Brain:Tick()
-    end
-
-    if UPF.Resilience and not UPF.SafeMode then
-        UPF.Resilience:Check(char)
-    end
+UPF.Connections.CharacterAdded = LocalPlayer.CharacterAdded:Connect(function(char)
+    task.wait(0.5) -- 🔥 importante (evita nil)
+    SetupCharacter(char)
 end)
 
-print("✅ Core initialized")
+-- inicial
+if LocalPlayer.Character then
+    SetupCharacter(LocalPlayer.Character)
+end
+
+print("✅ Core stable loaded")
