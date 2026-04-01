@@ -21,6 +21,7 @@ local MODULES = {
     "module_ui_theme.lua",
     "module_ui_logs.lua",
     "module_antikick.lua",
+    "module_modal_manager.lua",
     "installer.lua",
 }
 
