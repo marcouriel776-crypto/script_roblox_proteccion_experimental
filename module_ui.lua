@@ -11,7 +11,7 @@ local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 -- UPF debe existir (loader inicializó _G.UPF)
 local UPF = _G.UPF
 if not UPF then
-    warn("module_ui.lua: UPF no inicializado")
+    warn("module_ui.lua: UPF en proceso de mejoras")
     return
 end
 
