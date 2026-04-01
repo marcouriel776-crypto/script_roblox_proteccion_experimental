@@ -9,7 +9,7 @@ local MODULES = {
     "module_core.lua",
     "module_protection.lua",
     "module_smart.lua",
-    --module_smart_protection.lua--
+    "module_smart_protection.lua",
     "module_recovery.lua",
     "module_resilience.lua",
     "module_antifreeze.lua",
