@@ -7,18 +7,16 @@ local MODULES = {
     "module_utils.lua",
     "module_upf_api.lua",
     "module_core.lua",
-    
     "module_protection.lua",
     "module_smart_protection.lua",
     "module_recovery.lua",
     "module_resilience.lua",
     "module_antifreeze.lua",
     "module_audio.lua",
-
     "module_behavior_analyzer.lua",
     "module_admin_detector.lua",
     "module_decision_engine.lua",
-
+    "module_smart.lua",
     "module_ui.lua",
     "module_ui_theme.lua",
     "module_ui_logs.lua",
