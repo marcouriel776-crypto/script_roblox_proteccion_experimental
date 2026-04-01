@@ -8,9 +8,9 @@ local MODULES = {
     "module_upf_api.lua",
     "module_core.lua",
     "module_protection.lua",
-    "module_smart.lua",
  --module_smart_protection.lua--
     "module_recovery.lua",
+    "module_smart.lua",
     "module_resilience.lua",
     "module_antifreeze.lua",
     "module_audio.lua",
