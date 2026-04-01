@@ -1,74 +1,100 @@
--- module_protection.lua (FIXED PRO)
+-- module_protection.lua (PRO + NOCLIP GLOBAL)
 
 local UPF = _G.UPF
 if not UPF then warn("UPF missing"); return end
 
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local LocalPlayer = Players.LocalPlayer
+
+UPF.Connections = UPF.Connections or {}
+UPF.State = UPF.State or {}
+
 UPF.State.Protection = UPF.State.Protection or {}
-UPF.State.Protection.BlockedEvents = UPF.State.Protection.BlockedEvents or 0
 UPF.State.LastSafePosition = UPF.State.LastSafePosition or nil
 
-local MAX_DISTANCE_PER_FRAME = 60
-local MAX_LINEAR_VELOCITY = 120
+local MAX_DISTANCE = 60
+local MAX_VELOCITY = 120
 
 local lastPosition = nil
 
-UPF.Connections.ProtectionHeartbeat = RunService.Heartbeat:Connect(function()
+-- =========================
+-- 🔥 NOCLIP SOLO VS PLAYERS
+-- =========================
 
+local function ApplyPlayerNoclip()
+    local myChar = LocalPlayer.Character
+    if not myChar then return end
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character then
+            for _, part in ipairs(plr.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end
+
+-- =========================
+-- 🧠 PROTECTION CORE
+-- =========================
+
+local function ProtectionLoop()
     if not UPF.State.ScriptRunning then return end
     if not UPF.State.ProtectionEnabled then return end
-    if not UPF.RootPart or not UPF.Humanoid then return end
 
-    local currentPos = UPF.RootPart.Position
+    local char = LocalPlayer.Character
+    if not char then return end
 
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+
+    if not hrp or not hum then return end
+
+    -- aplicar noclip SIEMPRE
+    pcall(ApplyPlayerNoclip)
+
+    -- guardar posición segura
+    local vel = hrp.AssemblyLinearVelocity.Magnitude
+    if hum.FloorMaterial ~= Enum.Material.Air and vel < 10 then
+        UPF.State.LastSafePosition = hrp.CFrame
+    end
+
+    -- inicializar
     if not lastPosition then
-        lastPosition = currentPos
+        lastPosition = hrp.Position
         return
     end
 
-    local dist = (currentPos - lastPosition).Magnitude
-    local vel = 0
-    pcall(function()
-        vel = UPF.RootPart.AssemblyLinearVelocity.Magnitude
-    end)
+    local dist = (hrp.Position - lastPosition).Magnitude
 
-    -- 🔴 IGNORAR FLING (alta velocidad)
-    if vel > 120 then
-        lastPosition = currentPos
-        return
-    end
-
-    -- 🔴 IGNORAR CAÍDA AL VACÍO
-    if currentPos.Y < -20 then
-        return
-    end
-
-    -- 🛡️ DETECCIÓN TELEPORT
-    if dist > MAX_DISTANCE_PER_FRAME then
+    -- 🚨 TELEPORT / FLING DETECTADO
+    if dist > MAX_DISTANCE or vel > MAX_VELOCITY then
         if UPF.State.LastSafePosition then
-            pcall(function()
-                UPF.Utils.SafeRollback(UPF.RootPart, UPF.State.LastSafePosition)
-            end)
+            hrp.CFrame = UPF.State.LastSafePosition
+            hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+            warn("[UPF] Rollback + velocity reset")
         end
-
-        UPF.Utils.ClearForces(UPF.RootPart)
-        UPF.State.Protection.BlockedEvents += 1
     end
 
-    -- 🛡️ ANTI-FLING (extra)
-    if vel > MAX_LINEAR_VELOCITY then
-        UPF.Utils.ClearForces(UPF.RootPart)
-        UPF.State.Protection.BlockedEvents += 1
-    end
+    lastPosition = hrp.Position
+end
 
-    -- ✅ GUARDAR POSICIÓN SEGURA REAL
-    if UPF.Humanoid.FloorMaterial ~= Enum.Material.Air and vel < 10 then
-        UPF.State.LastSafePosition = UPF.RootPart.CFrame
-    end
+-- =========================
+-- 🔌 CONNECTION SEGURA
+-- =========================
 
-    lastPosition = currentPos
+if UPF.Connections.Protection then
+    pcall(function()
+        UPF.Connections.Protection:Disconnect()
+    end)
+end
 
+UPF.Connections.Protection = RunService.Heartbeat:Connect(function()
+    pcall(ProtectionLoop)
 end)
 
-print("✅ Protection PRO loaded")
+print("✅ Protection PRO + Noclip loaded")
