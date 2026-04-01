@@ -7,7 +7,7 @@ local MODULES = {
     "module_utils.lua",
     "module_upf_api.lua",
     "module_core.lua",
-
+    
     "module_protection.lua",
     "module_smart_protection.lua",
     "module_recovery.lua",
@@ -22,7 +22,7 @@ local MODULES = {
     "module_ui.lua",
     "module_ui_theme.lua",
     "module_ui_logs.lua",
-
+    "module_antikick.lua",
     "installer.lua",
 }
 
