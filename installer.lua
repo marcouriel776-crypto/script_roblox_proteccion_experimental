@@ -1,7 +1,7 @@
 -- installer.lua
 -- Instala loader_v4.lua en Delta Autoexecute
 
-local TARGET_DIR = "/storage/emulated/0/Delta/Autoexecute/"
+local TARGET_DIR = "/storage/emulated/0/Delta/Autoexecute"
 local TARGET_FILE = TARGET_DIR .. "loader.lua"
 
 local SOURCE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/loader_v4.lua"
