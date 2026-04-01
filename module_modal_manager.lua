@@ -205,7 +205,7 @@ getgenv().UPFProtection = {
     
     EnableReconnect = function(state)
         config.ENABLE_RECONNECT = state
-        silentLog("Auto-Reconnect", state and "habilitado" o "deshabilitado")
+        silentLog("Auto-Reconnect", state and "habilitado" or "deshabilitado")
     end,
     
     SetSilentMode = function(state)
