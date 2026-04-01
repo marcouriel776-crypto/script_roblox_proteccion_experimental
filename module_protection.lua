@@ -1,7 +1,5 @@
--- module_protection.lua (PRO + NOCLIP GLOBAL)
-
 local UPF = _G.UPF
-if not UPF then warn("UPF missing"); return end
+if not UPF then return end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -11,22 +9,17 @@ local LocalPlayer = Players.LocalPlayer
 UPF.Connections = UPF.Connections or {}
 UPF.State = UPF.State or {}
 
-UPF.State.Protection = UPF.State.Protection or {}
 UPF.State.LastSafePosition = UPF.State.LastSafePosition or nil
 
-local MAX_DISTANCE = 60
-local MAX_VELOCITY = 120
-
 local lastPosition = nil
+local lastRollback = 0
+local rollbackCooldown = 1.5 -- 🔥 evita spam
 
 -- =========================
--- 🔥 NOCLIP SOLO VS PLAYERS
+-- NOCLIP (OPTIMIZADO)
 -- =========================
 
-local function ApplyPlayerNoclip()
-    local myChar = LocalPlayer.Character
-    if not myChar then return end
-
+local function ApplyNoclip()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer and plr.Character then
             for _, part in ipairs(plr.Character:GetDescendants()) do
@@ -39,11 +32,10 @@ local function ApplyPlayerNoclip()
 end
 
 -- =========================
--- 🧠 PROTECTION CORE
+-- LOOP PRINCIPAL
 -- =========================
 
-local function ProtectionLoop()
-    if not UPF.State.ScriptRunning then return end
+local function Loop()
     if not UPF.State.ProtectionEnabled then return end
 
     local char = LocalPlayer.Character
@@ -51,19 +43,18 @@ local function ProtectionLoop()
 
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChildOfClass("Humanoid")
-
     if not hrp or not hum then return end
 
-    -- aplicar noclip SIEMPRE
-    pcall(ApplyPlayerNoclip)
+    -- noclip seguro
+    pcall(ApplyNoclip)
 
-    -- guardar posición segura
     local vel = hrp.AssemblyLinearVelocity.Magnitude
+
+    -- guardar punto seguro
     if hum.FloorMaterial ~= Enum.Material.Air and vel < 10 then
         UPF.State.LastSafePosition = hrp.CFrame
     end
 
-    -- inicializar
     if not lastPosition then
         lastPosition = hrp.Position
         return
@@ -71,12 +62,18 @@ local function ProtectionLoop()
 
     local dist = (hrp.Position - lastPosition).Magnitude
 
-    -- 🚨 TELEPORT / FLING DETECTADO
-    if dist > MAX_DISTANCE or vel > MAX_VELOCITY then
-        if UPF.State.LastSafePosition then
-            hrp.CFrame = UPF.State.LastSafePosition
-            hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
-            warn("[UPF] Rollback + velocity reset")
+    -- 🚨 DETECCIÓN
+    if dist > 80 or vel > 140 then
+
+        -- 🔥 CONTROL DE COOLDOWN (CLAVE)
+        if tick() - lastRollback > rollbackCooldown then
+            lastRollback = tick()
+
+            if UPF.State.LastSafePosition then
+                hrp.CFrame = UPF.State.LastSafePosition
+                hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                warn("[UPF] Safe rollback")
+            end
         end
     end
 
@@ -84,7 +81,7 @@ local function ProtectionLoop()
 end
 
 -- =========================
--- 🔌 CONNECTION SEGURA
+-- CONNECTION
 -- =========================
 
 if UPF.Connections.Protection then
@@ -94,7 +91,7 @@ if UPF.Connections.Protection then
 end
 
 UPF.Connections.Protection = RunService.Heartbeat:Connect(function()
-    pcall(ProtectionLoop)
+    pcall(Loop) -- 🔥 PROTECCIÓN GLOBAL
 end)
 
-print("✅ Protection PRO + Noclip loaded")
+print("✅ Protection FIX loaded")
