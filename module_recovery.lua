@@ -1,8 +1,6 @@
--- module_recovery.lua
--- UPF Recovery System + God Mode
+-- module_recovery.lua (CLEAN STABLE)
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 
@@ -18,11 +16,10 @@ local Recovery = UPF.Recovery
 Recovery.Connections = {}
 
 ---------------------------------------------------
--- GOD MODE CORE
+-- GOD MODE
 ---------------------------------------------------
 
 local function protectHumanoid(humanoid)
-
     if not humanoid then return end
 
     if Recovery.Connections.Health then
@@ -30,41 +27,28 @@ local function protectHumanoid(humanoid)
     end
 
     Recovery.Connections.Health = humanoid.HealthChanged:Connect(function()
-
         if not UPF.State.GodMode then return end
 
         if humanoid.Health < humanoid.MaxHealth then
             humanoid.Health = humanoid.MaxHealth
         end
-
     end)
-
 end
 
 ---------------------------------------------------
--- CHARACTER MONITOR
+-- CHARACTER
 ---------------------------------------------------
 
 local function monitorCharacter(character)
-
     local humanoid = character:FindFirstChildOfClass("Humanoid")
-
     if humanoid then
         protectHumanoid(humanoid)
     end
-
 end
 
----------------------------------------------------
--- RESPAWN SUPPORT
----------------------------------------------------
-
 player.CharacterAdded:Connect(function(character)
-
     task.wait(1)
-
     monitorCharacter(character)
-
 end)
 
 if player.Character then
@@ -72,16 +56,11 @@ if player.Character then
 end
 
 ---------------------------------------------------
--- PUBLIC API
+-- API
 ---------------------------------------------------
 
 function UPF:ToggleGodMode(on)
-
-    if on == nil then
-        UPF.State.GodMode = not UPF.State.GodMode
-    else
-        UPF.State.GodMode = on
-    end
+    UPF.State.GodMode = (on == nil) and not UPF.State.GodMode or on
 
     print("🛡 GodMode:", UPF.State.GodMode)
 
@@ -92,66 +71,30 @@ function UPF:ToggleGodMode(on)
     if UPF.SaveSettings then
         UPF:SaveSettings()
     end
-
 end
 
 ---------------------------------------------------
--- RECOVERY FUNCTIONS
+-- RECOVERY
 ---------------------------------------------------
 
 function UPF:RecoverPlayer()
-
     local character = player.Character
     if not character then return end
 
     local humanoid = character:FindFirstChildOfClass("Humanoid")
-
     if humanoid then
         humanoid.Health = humanoid.MaxHealth
-        print("💚 Player recovered")
     end
-
 end
 
 function UPF:ReturnToSafePoint()
-
     local character = player.Character
     if not character then return end
 
     local root = character:FindFirstChild("HumanoidRootPart")
-
     if root then
-        root.Velocity = Vector3.new(0,0,0)
-        print("📍 Safe position restored")
+        root.AssemblyLinearVelocity = Vector3.zero
     end
-
 end
 
----------------------------------------------------
--- ANTI TELEPORT SYSTEM
----------------------------------------------------
-
-local lastPosition = nil
-
-RunService.Heartbeat:Connect(function()
-    local character = player.Character
-    if not character then return end
-
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    local current = root.Position
-
-    if lastPosition then
-        local distance = (current - lastPosition).Magnitude
-
-        if distance > 60 then
-            task.wait(0.05)
-            root.CFrame = CFrame.new(lastPosition)
-            print("🚫 AntiTeleport: reverted")
-        end
-    end
-
-    lastPosition = current
-end)
-print("✅ module_recovery loaded")
+print("✅ Recovery CLEAN loaded")
