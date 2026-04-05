@@ -1,8 +1,7 @@
--- module_protection.lua (ANTI-TP PRO)
+-- module_protection.lua (ANTI-TP ULTRA STABLE)
 
 local UPF = _G.UPF
 if not UPF then return end
-if not UPF.State.CharacterReady then return end
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -16,7 +15,7 @@ local FORCE_THRESHOLD = 500
 local lastPos = nil
 local safeCFrame = nil
 local lastCorrection = 0
-local correctionCooldown = 0.8
+local correctionCooldown = 1
 
 local function isFlinging(root)
     local vel = root.AssemblyLinearVelocity.Magnitude
@@ -25,7 +24,7 @@ end
 
 local function hasExternalForces(root)
     for _, v in ipairs(root:GetChildren()) do
-        if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") then
+        if v:IsA("BodyVelocity") then -- 🔥 quitamos LinearVelocity
             return true
         end
     end
@@ -33,10 +32,14 @@ local function hasExternalForces(root)
 end
 
 local function isSafeToSave(humanoid, velocity)
-    return humanoid.FloorMaterial ~= Enum.Material.Air and velocity < 10
+    return humanoid.FloorMaterial ~= Enum.Material.Air 
+        and velocity < 5 -- 🔥 más estricto
 end
 
 RunService.Heartbeat:Connect(function()
+
+    -- 🔥 mover aquí el check
+    if not UPF.State.CharacterReady then return end
     if not UPF.State.ProtectionEnabled then return end
 
     local char = player.Character
@@ -63,7 +66,6 @@ RunService.Heartbeat:Connect(function()
 
     local teleportDetected = false
 
-    -- DETECCIÓN MULTI
     if dist > MAX_DISTANCE then
         teleportDetected = true
     elseif vel > MAX_SPEED then
@@ -74,26 +76,35 @@ RunService.Heartbeat:Connect(function()
         teleportDetected = true
     end
 
-    -- CORRECCIÓN INTELIGENTE
+    -- 🔥 confirmación extra (evita falsos positivos)
     if teleportDetected and safeCFrame then
+
         if tick() - lastCorrection > correctionCooldown then
-            lastCorrection = tick()
 
-            -- limpiar fuerzas primero
-            for _, v in ipairs(root:GetChildren()) do
-                if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") then
-                    v:Destroy()
+            task.wait(0.05) -- 🔥 confirmación
+
+            local newPos = root.Position
+            local stillBad = (newPos - safeCFrame.Position).Magnitude > 20
+
+            if stillBad then
+                lastCorrection = tick()
+
+                -- limpiar fuerzas
+                for _, v in ipairs(root:GetChildren()) do
+                    if v:IsA("BodyVelocity") then
+                        v:Destroy()
+                    end
                 end
+
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.CFrame = safeCFrame
+
+                warn("[UPF] Teleport corrected (stable)")
             end
-
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.CFrame = safeCFrame
-
-            warn("[UPF] Teleport blocked + corrected")
         end
     end
 
     lastPos = pos
 end)
 
-print("✅ AntiTeleport PRO loaded")
+print("✅ AntiTeleport ULTRA STABLE loaded")
