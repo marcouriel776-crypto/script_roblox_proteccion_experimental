@@ -1,76 +1,101 @@
--- module_settings.lua (actualizado: expone Save/Load a _G.UPF)
+-- module_settings.lua (UPF SETTINGS PRO)
+
 local HttpService = game:GetService("HttpService")
 
 local SETTINGS_FILENAME = "upf_config.json"
 
-Settings = Settings or {
-    protection_enabled = false,
-    protection_manual_override = nil,
+_G.UPF = _G.UPF or {}
+local UPF = _G.UPF
+
+UPF.State = UPF.State or {}
+
+-- =========================
+-- DEFAULT SETTINGS
+-- =========================
+
+local Settings = {
+    protection_enabled = true,
     godmode_enabled = false,
     smart_mode = "SAFE",
-    auto_return_enabled = true,
-    return_cooldown = 5,
-    audio_shield_enabled = false,
-    audio_shield_radius = 20,
-    audio_shield_level = 0.25
+    noclip_players = false
 }
+
+-- =========================
+-- FILE HELPERS
+-- =========================
 
 local function try_readfile(path)
     if type(readfile) ~= "function" then return nil end
     local ok, content = pcall(readfile, path)
-    if ok then return content end
-    return nil
+    return ok and content or nil
 end
 
 local function try_writefile(path, content)
     if type(writefile) ~= "function" then return false end
-    local ok = pcall(writefile, path, content)
-    return ok
+    return pcall(writefile, path, content)
 end
 
-function LoadUPFSettings()
+-- =========================
+-- LOAD
+-- =========================
+
+function UPF:LoadSettings()
+
     local src = try_readfile(SETTINGS_FILENAME) or _G.UPF_LOCAL_SETTINGS
     if not src then return false end
-    local ok, parsed = pcall(function() return HttpService:JSONDecode(src) end)
-    if not ok or type(parsed) ~= "table" then return false end
-    for k,v in pairs(parsed) do Settings[k] = v end
-    pcall(function()
-        ProtectionEnabled = Settings.protection_enabled
-        ProtectionManualOverride = Settings.protection_manual_override
-        GodModeEnabled = Settings.godmode_enabled
-        SmartMode = Settings.smart_mode
-        AutoReturnEnabled = Settings.auto_return_enabled
-        ReturnCooldown = Settings.return_cooldown or ReturnCooldown
+
+    local ok, parsed = pcall(function()
+        return HttpService:JSONDecode(src)
     end)
+
+    if not ok or type(parsed) ~= "table" then return false end
+
+    for k,v in pairs(parsed) do
+        Settings[k] = v
+    end
+
+    -- 🔥 APLICAR A UPF.STATE (CLAVE)
+    UPF.State.ProtectionEnabled = Settings.protection_enabled
+    UPF.State.GodMode = Settings.godmode_enabled
+    UPF.State.SmartMode = Settings.smart_mode
+    UPF.State.NoClipPlayers = Settings.noclip_players
+
+    print("✅ Settings loaded into UPF.State")
+
     return true
 end
 
-function SaveUPFSettings()
-    pcall(function()
-        Settings.protection_enabled = ProtectionEnabled or Settings.protection_enabled
-        Settings.protection_manual_override = (ProtectionManualOverride ~= nil) and ProtectionManualOverride or Settings.protection_manual_override
-        Settings.godmode_enabled = GodModeEnabled or Settings.godmode_enabled
-        Settings.smart_mode = SmartMode or Settings.smart_mode
-        Settings.auto_return_enabled = AutoReturnEnabled or Settings.auto_return_enabled
-        Settings.return_cooldown = ReturnCooldown or Settings.return_cooldown
-        -- audio fields kept in Settings by module_audio
-    end)
+-- =========================
+-- SAVE
+-- =========================
+
+function UPF:SaveSettings()
+
+    -- 🔥 LEER DESDE UPF.STATE
+    Settings.protection_enabled = UPF.State.ProtectionEnabled
+    Settings.godmode_enabled = UPF.State.GodMode
+    Settings.smart_mode = UPF.State.SmartMode
+    Settings.noclip_players = UPF.State.NoClipPlayers
 
     local encoded = HttpService:JSONEncode(Settings)
+
     local ok = try_writefile(SETTINGS_FILENAME, encoded)
     if not ok then
         _G.UPF_LOCAL_SETTINGS = encoded
     end
+
+    print("💾 Settings saved")
+
     return ok
 end
 
--- load on start
-LoadUPFSettings()
-print("✅ Settings module loaded (persistence ready)")
+-- =========================
+-- AUTO LOAD (SEGURO)
+-- =========================
 
--- === EXPONE LAS FUNCIONES EN LA API GLOBAL UPF ===
-_G.UPF = _G.UPF or {}
-_G.UPF.SaveSettings = _G.UPF.SaveSettings or SaveUPFSettings
-_G.UPF.LoadSettings = _G.UPF.LoadSettings or LoadUPFSettings
+task.spawn(function()
+    repeat task.wait() until UPF and UPF.State
+    UPF:LoadSettings()
+end)
 
-print("✅ Settings functions exposed to _G.UPF (SaveSettings / LoadSettings)")
+print("✅ Settings PRO loaded")
