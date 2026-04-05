@@ -14,6 +14,7 @@ local MODULES = {
     "module_recovery.lua",
 
     -- 🧩 SOPORTE
+    "module_noclip_players.lua",
     -- "module_resilience.lua", (opcional)
     -- "module_antifreeze.lua", (opcional)
 
