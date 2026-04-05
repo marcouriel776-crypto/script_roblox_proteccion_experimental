@@ -1,16 +1,12 @@
--- module_smart.lua
+-- module_smart.lua (ULTRA CLEAN + REAL USEFUL)
+
 local UPF = _G.UPF
-if not UPF then warn("UPF missing"); return end
+if not UPF then return end
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
--- 🔥 FIX CLAVE
 UPF.Connections = UPF.Connections or {}
-
--- =========================
--- STATE
--- =========================
 
 UPF.State.SmartMode = UPF.State.SmartMode or "SAFE"
 UPF.State.DangerousPlayers = UPF.State.DangerousPlayers or {}
@@ -18,23 +14,16 @@ UPF.State.FlingEvents = UPF.State.FlingEvents or 0
 
 local LocalPlayer = Players.LocalPlayer
 
--- =========================
--- CONFIG
--- =========================
-
 local SAFE_THRESHOLD = 80
 local AGGRESSIVE_THRESHOLD = 120
 local DANGER_DURATION = 3
+local MAX_DISTANCE = 50 -- 🔥 NUEVO (solo cercanos)
 
--- =========================
--- FUNCIONES
 -- =========================
 
 local function MarkDanger(plr)
     UPF.State.DangerousPlayers[plr] = tick()
-    UPF.State.FlingEvents = (UPF.State.FlingEvents or 0) + 1
-
-    warn("[UPF] Dangerous player detected:", plr.Name)
+    UPF.State.FlingEvents += 1
 end
 
 local function CleanupDanger()
@@ -45,30 +34,38 @@ local function CleanupDanger()
     end
 end
 
+local function IsNear(localRoot, otherRoot)
+    return (localRoot.Position - otherRoot.Position).Magnitude <= MAX_DISTANCE
+end
+
 local function CheckPlayers()
+
+    local localChar = LocalPlayer.Character
+    if not localChar then return end
+
+    local localRoot = localChar:FindFirstChild("HumanoidRootPart")
+    if not localRoot then return end
+
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
             local char = plr.Character
             if char then
                 local hrp = char:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    local ok, vel = pcall(function()
-                        return hrp.AssemblyLinearVelocity.Magnitude
-                    end)
+                if hrp and IsNear(localRoot, hrp) then -- 🔥 FILTRO CLAVE
 
-                    if ok and vel then
-                        local threshold = (UPF.State.SmartMode == "SAFE")
-                            and SAFE_THRESHOLD
-                            or AGGRESSIVE_THRESHOLD
+                    local vel = hrp.AssemblyLinearVelocity.Magnitude
 
-                        if vel > threshold then
-                            MarkDanger(plr)
-                        end
+                    local threshold = (UPF.State.SmartMode == "SAFE")
+                        and SAFE_THRESHOLD
+                        or AGGRESSIVE_THRESHOLD
+
+                    if vel > threshold then
+                        MarkDanger(plr)
                     end
 
-                    -- detectar fuerzas tipo fling
+                    -- 🔥 SOLO BodyVelocity (igual que protection)
                     for _, obj in ipairs(hrp:GetChildren()) do
-                        if obj:IsA("BodyVelocity") or obj:IsA("LinearVelocity") then
+                        if obj:IsA("BodyVelocity") then
                             MarkDanger(plr)
                         end
                     end
@@ -79,10 +76,7 @@ local function CheckPlayers()
 end
 
 -- =========================
--- CONNECTION SEGURA
--- =========================
 
--- 🔥 evitar duplicación de conexiones
 if UPF.Connections.SmartHeartbeat then
     pcall(function()
         UPF.Connections.SmartHeartbeat:Disconnect()
@@ -92,14 +86,10 @@ end
 UPF.Connections.SmartHeartbeat = RunService.Heartbeat:Connect(function()
     if not UPF.State.ScriptRunning then return end
     if not UPF.State.ProtectionEnabled then return end
+    if not UPF.State.CharacterReady then return end
 
     pcall(CleanupDanger)
     pcall(CheckPlayers)
 end)
 
--- =========================
--- DEBUG / INFO
--- =========================
-
-print("✅ Smart module PRO loaded")
-print("   Mode:", UPF.State.SmartMode)
+print("✅ Smart ULTRA CLEAN loaded")
