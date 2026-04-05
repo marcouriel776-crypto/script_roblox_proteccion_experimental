@@ -2,6 +2,7 @@
 
 local UPF = _G.UPF
 if not UPF then return end
+if not UPF.State.CharacterReady then return end
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
