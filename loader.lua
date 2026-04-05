@@ -18,8 +18,8 @@ local MODULES = {
     "module_admin_detector.lua",
     "module_decision_engine.lua",
     "module_ui.lua",
-    "module_ui_theme.lua",
-    "module_ui_logs.lua",
+    --module_ui_theme.lua--
+    --module_ui_logs.lua--
     "module_antikick.lua",
     "module_modal_manager.lua",
     "installer.lua",
