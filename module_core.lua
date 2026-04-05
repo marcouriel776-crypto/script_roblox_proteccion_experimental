@@ -1,4 +1,4 @@
--- module_core.lua (FIXED STABLE)
+-- module_core.lua (ULTRA STABLE)
 
 local Players = game:GetService("Players")
 
@@ -12,6 +12,7 @@ UPF.Connections = UPF.Connections or {}
 
 UPF.State.ScriptRunning = true
 UPF.State.ProtectionEnabled = true
+UPF.State.CharacterReady = false -- 🔥 NUEVO
 
 UPF.RootPart = nil
 UPF.Humanoid = nil
@@ -21,11 +22,10 @@ UPF.Humanoid = nil
 -- =========================
 
 local function SetupCharacter(char)
-
     if not char then return end
 
-    local hrp = char:WaitForChild("HumanoidRootPart", 5)
-    local hum = char:WaitForChild("Humanoid", 5)
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:WaitForChild("Humanoid")
 
     if not hrp or not hum then
         warn("[UPF] Failed to get character parts")
@@ -34,9 +34,9 @@ local function SetupCharacter(char)
 
     UPF.RootPart = hrp
     UPF.Humanoid = hum
+    UPF.State.CharacterReady = true -- 🔥 CLAVE
 
-    print("✅ Character loaded")
-
+    print("✅ Character fully ready")
 end
 
 -- =========================
@@ -50,7 +50,9 @@ if UPF.Connections.CharacterAdded then
 end
 
 UPF.Connections.CharacterAdded = LocalPlayer.CharacterAdded:Connect(function(char)
-    task.wait(0.5) -- 🔥 importante (evita nil)
+    UPF.State.CharacterReady = false
+
+    -- 🔥 ESPERA REAL (no tiempo fijo)
     SetupCharacter(char)
 end)
 
@@ -59,4 +61,4 @@ if LocalPlayer.Character then
     SetupCharacter(LocalPlayer.Character)
 end
 
-print("✅ Core stable loaded")
+print("✅ Core ULTRA STABLE loaded")
