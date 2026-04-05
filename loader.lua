@@ -7,21 +7,36 @@ local MODULES = {
     "module_utils.lua",
     "module_upf_api.lua",
     "module_core.lua",
+
+    -- 🔥 CORE DEFENSA
     "module_protection.lua",
- --module_smart_protection.lua--
-    "module_recovery.lua",
     "module_smart.lua",
-    "module_resilience.lua",
-    "module_antifreeze.lua",
+    "module_recovery.lua",
+
+    -- 🧩 SOPORTE
+    -- "module_resilience.lua", (opcional)
+    -- "module_antifreeze.lua", (opcional)
+
     "module_audio.lua",
-    "module_behavior_analyzer.lua",
     "module_admin_detector.lua",
     "module_decision_engine.lua",
+
+    -- ❌ PROBLEMÁTICOS (DESACTIVADOS)
+    -- "module_behavior_analyzer.lua",
+    -- "module_smart_protection.lua",
+
+    -- 🎨 UI NUEVA
     "module_ui.lua",
-    --module_ui_theme.lua--
-    --module_ui_logs.lua--
+
+    -- ❌ UI ANTIGUA
+    -- "module_ui_theme.lua",
+    -- "module_ui_logs.lua",
+
+    -- AntiCheat
     "module_antikick.lua",
     "module_modal_manager.lua",
+   
+    -- Instalador
     "installer.lua",
 }
 
