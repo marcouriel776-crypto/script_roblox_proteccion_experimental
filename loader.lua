@@ -3,41 +3,22 @@
 local BASE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
 
 local MODULES = {
-    "module_settings.lua",
-    "module_utils.lua",
-    "module_upf_api.lua",
     "module_core.lua",
-
-    -- 🔥 CORE DEFENSA
+    "module_utils.lua",
+    "module_settings.lua",
+    "module_upf_api.lua",
+    "module_recovery.lua",
     "module_protection.lua",
     "module_smart.lua",
-    "module_recovery.lua",
-
-    -- 🧩 SOPORTE
     "module_noclip_players.lua",
-    "module_resilience.lua", (opcional)
-    -- "module_antifreeze.lua", (opcional)
-
+    "module_resilience.lua",
     "module_audio.lua",
     "module_admin_detector.lua",
-    "module_decision_engine.lua",
-
-    -- ❌ PROBLEMÁTICOS (DESACTIVADOS)
-    -- "module_behavior_analyzer.lua",
-    -- "module_smart_protection.lua",
-
-    -- 🎨 UI NUEVA
+    "module_decision_engine.lua",             
+    "module_behavior_analyzer.lua",
     "module_ui.lua",
-
-    -- ❌ UI ANTIGUA
-    -- "module_ui_theme.lua",
-    -- "module_ui_logs.lua",
-
-    -- AntiCheat
     "module_antikick.lua",
     "module_modal_manager.lua",
-   
-    -- Instalador
     "installer.lua",
 }
 
