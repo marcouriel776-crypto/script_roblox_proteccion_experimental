@@ -15,7 +15,7 @@ local MODULES = {
 
     -- 🧩 SOPORTE
     "module_noclip_players.lua",
-    -- "module_resilience.lua", (opcional)
+    "module_resilience.lua", (opcional)
     -- "module_antifreeze.lua", (opcional)
 
     "module_audio.lua",
