@@ -1,9 +1,41 @@
--- module_ui.lua (UPF + Rayfield PRO)
+-- module_ui.lua (UPF UI PRO CLEAN)
 
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+-- =========================
+-- LOAD RAYFIELD (SAFE)
+-- =========================
 
+local success, Rayfield = pcall(function()
+    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+end)
+
+if not success or not Rayfield then
+    warn("❌ Rayfield failed to load")
+    return
+end
+
+-- =========================
+-- WAIT FOR UPF (CRÍTICO)
+-- =========================
+
+repeat task.wait() until _G.UPF and _G.UPF.State
 local UPF = _G.UPF
-if not UPF then warn("UPF missing"); return end
+
+print("✅ UPF detected in UI")
+
+-- =========================
+-- SAFE CALL HELPER
+-- =========================
+
+local function safeCall(func, ...)
+    if typeof(func) == "function" then
+        local ok, err = pcall(func, ...)
+        if not ok then
+            warn("UI Callback Error:", err)
+        end
+    else
+        warn("UI tried to call nil function")
+    end
+end
 
 -- =========================
 -- WINDOW
@@ -37,18 +69,14 @@ MainTab:CreateToggle({
    Name = "💚 God Mode",
    CurrentValue = false,
    Callback = function(Value)
-      if UPF.ToggleGodMode then
-         UPF:ToggleGodMode(Value)
-      end
+      safeCall(UPF.ToggleGodMode, UPF, Value)
    end,
 })
 
 MainTab:CreateButton({
    Name = "📍 Recover Player",
    Callback = function()
-      if UPF.RecoverPlayer then
-         UPF:RecoverPlayer()
-      end
+      safeCall(UPF.RecoverPlayer, UPF)
    end,
 })
 
@@ -69,24 +97,30 @@ ProtectionTab:CreateToggle({
    Name = "🛡 Enable Protection",
    CurrentValue = true,
    Callback = function(Value)
-      UPF.State.ProtectionEnabled = Value
+      if UPF.State then
+         UPF.State.ProtectionEnabled = Value
+      end
    end,
 })
 
 ProtectionTab:CreateDropdown({
    Name = "🧠 Smart Mode",
    Options = {"SAFE", "AGGRESSIVE"},
-   CurrentOption = "SAFE",
+   CurrentOption = UPF.State.SmartMode or "SAFE",
    Callback = function(Option)
-      UPF.State.SmartMode = Option
+      if UPF.State then
+         UPF.State.SmartMode = Option
+      end
    end,
 })
 
 ProtectionTab:CreateToggle({
-   Name = "🚫 Anti-Fling (NoClip Players)",
-   CurrentValue = true,
+   Name = "🚫 NoClip Players",
+   CurrentValue = false,
    Callback = function(Value)
-      UPF.State.NoClipPlayers = Value
+      if UPF.State then
+         UPF.State.NoClipPlayers = Value
+      end
    end,
 })
 
@@ -114,8 +148,8 @@ MiscTab:CreateButton({
 
 Rayfield:Notify({
    Title = "UPF Loaded",
-   Content = "Sistema listo",
+   Content = "Sistema listo sin errores",
    Duration = 4,
 })
 
-print("✅ Rayfield UI loaded")
+print("✅ UI PRO CLEAN loaded")
