@@ -1,4 +1,7 @@
+-- module_behavior_analyzer.lua (FIXED)
+
 local UPF = getgenv().UPF
+local RunService = game:GetService("RunService")
 
 local Analyzer = {}
 UPF.Analyzer = Analyzer
@@ -6,14 +9,11 @@ UPF.Analyzer = Analyzer
 local velocityHistory = {}
 local lastCheck = 0
 
-function Analyzer:TrackCharacter(char)
-    local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+function Analyzer:Track(root)
+    local v = root.AssemblyLinearVelocity.Magnitude
 
-    local v = root.Velocity.Magnitude
     table.insert(velocityHistory, v)
-
-    if #velocityHistory > 20 then
+    if #velocityHistory > 15 then
         table.remove(velocityHistory, 1)
     end
 end
@@ -25,18 +25,29 @@ function Analyzer:Evaluate()
     local spikes = 0
 
     for _, v in ipairs(velocityHistory) do
-        if v > 120 then
+        if v > 150 then
             spikes += 1
         end
     end
 
-    if spikes > 5 then
-        warn("[UPF.AI] comportamiento anómalo detectado")
-        UPF.Flags = UPF.Flags or {}
+    UPF.Flags = UPF.Flags or {}
+
+    if spikes > 6 then
         UPF.Flags.SuspiciousMovement = true
     else
         UPF.Flags.SuspiciousMovement = false
     end
 end
 
-return Analyzer
+RunService.Heartbeat:Connect(function()
+    local char = game.Players.LocalPlayer.Character
+    if not char then return end
+
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    Analyzer:Track(root)
+    Analyzer:Evaluate()
+end)
+
+print("✅ Behavior Analyzer fixed")
