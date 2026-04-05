@@ -41,6 +41,20 @@ local MODULES = {
     "installer.lua",
 }
 
+for _, moduleName in ipairs(modules) do
+    local success, err = pcall(function()
+        loadstring(readfile(moduleName))()
+    end)
+
+    if success then
+        print("✅ Loaded:", moduleName)
+    else
+        warn("❌ Failed:", moduleName, err)
+    end
+end
+
+print("🚀 UPF FULL SYSTEM LOADED")
+
 -- =========================
 -- BASE GLOBAL
 -- =========================
