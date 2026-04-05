@@ -1,97 +1,98 @@
+-- module_protection.lua (ANTI-TP PRO)
+
 local UPF = _G.UPF
 if not UPF then return end
 
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
-local LocalPlayer = Players.LocalPlayer
+local player = Players.LocalPlayer
 
-UPF.Connections = UPF.Connections or {}
-UPF.State = UPF.State or {}
+local MAX_SPEED = 120
+local MAX_DISTANCE = 50
+local FORCE_THRESHOLD = 500
 
-UPF.State.LastSafePosition = UPF.State.LastSafePosition or nil
+local lastPos = nil
+local safeCFrame = nil
+local lastCorrection = 0
+local correctionCooldown = 0.8
 
-local lastPosition = nil
-local lastRollback = 0
-local rollbackCooldown = 1.5 -- 🔥 evita spam
-
--- =========================
--- NOCLIP (OPTIMIZADO)
--- =========================
-
-local function ApplyNoclip()
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            for _, part in ipairs(plr.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end
-    end
+local function isFlinging(root)
+    local vel = root.AssemblyLinearVelocity.Magnitude
+    return vel > FORCE_THRESHOLD
 end
 
--- =========================
--- LOOP PRINCIPAL
--- =========================
+local function hasExternalForces(root)
+    for _, v in ipairs(root:GetChildren()) do
+        if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") then
+            return true
+        end
+    end
+    return false
+end
 
-local function Loop()
+local function isSafeToSave(humanoid, velocity)
+    return humanoid.FloorMaterial ~= Enum.Material.Air and velocity < 10
+end
+
+RunService.Heartbeat:Connect(function()
     if not UPF.State.ProtectionEnabled then return end
 
-    local char = LocalPlayer.Character
+    local char = player.Character
     if not char then return end
 
-    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local root = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then return end
+    if not root or not hum then return end
 
-    -- noclip seguro
-    pcall(ApplyNoclip)
+    local pos = root.Position
+    local vel = root.AssemblyLinearVelocity.Magnitude
 
-    local vel = hrp.AssemblyLinearVelocity.Magnitude
-
-    -- guardar punto seguro
-    if hum.FloorMaterial ~= Enum.Material.Air and vel < 10 then
-        UPF.State.LastSafePosition = hrp.CFrame
+    -- guardar punto seguro REAL
+    if isSafeToSave(hum, vel) then
+        safeCFrame = root.CFrame
     end
 
-    if not lastPosition then
-        lastPosition = hrp.Position
+    if not lastPos then
+        lastPos = pos
         return
     end
 
-    local dist = (hrp.Position - lastPosition).Magnitude
+    local dist = (pos - lastPos).Magnitude
 
-    -- 🚨 DETECCIÓN
-    if dist > 80 or vel > 140 then
+    local teleportDetected = false
 
-        -- 🔥 CONTROL DE COOLDOWN (CLAVE)
-        if tick() - lastRollback > rollbackCooldown then
-            lastRollback = tick()
+    -- DETECCIÓN MULTI
+    if dist > MAX_DISTANCE then
+        teleportDetected = true
+    elseif vel > MAX_SPEED then
+        teleportDetected = true
+    elseif hasExternalForces(root) then
+        teleportDetected = true
+    elseif isFlinging(root) then
+        teleportDetected = true
+    end
 
-            if UPF.State.LastSafePosition then
-                hrp.CFrame = UPF.State.LastSafePosition
-                hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                warn("[UPF] Safe rollback")
+    -- CORRECCIÓN INTELIGENTE
+    if teleportDetected and safeCFrame then
+        if tick() - lastCorrection > correctionCooldown then
+            lastCorrection = tick()
+
+            -- limpiar fuerzas primero
+            for _, v in ipairs(root:GetChildren()) do
+                if v:IsA("BodyVelocity") or v:IsA("LinearVelocity") then
+                    v:Destroy()
+                end
             end
+
+            root.AssemblyLinearVelocity = Vector3.zero
+            root.CFrame = safeCFrame
+
+            warn("[UPF] Teleport blocked + corrected")
         end
     end
 
-    lastPosition = hrp.Position
-end
-
--- =========================
--- CONNECTION
--- =========================
-
-if UPF.Connections.Protection then
-    pcall(function()
-        UPF.Connections.Protection:Disconnect()
-    end)
-end
-
-UPF.Connections.Protection = RunService.Heartbeat:Connect(function()
-    pcall(Loop) -- 🔥 PROTECCIÓN GLOBAL
+    lastPos = pos
 end)
 
-print("✅ Protection FIX loaded")
+print("✅ AntiTeleport PRO loaded")
