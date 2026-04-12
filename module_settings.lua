@@ -1,101 +1,52 @@
--- module_settings.lua (UPF SETTINGS PRO)
+-- module_settings.lua (PRO CLEAN)
 
 local HttpService = game:GetService("HttpService")
 
-local SETTINGS_FILENAME = "upf_config.json"
-
-_G.UPF = _G.UPF or {}
 local UPF = _G.UPF
+UPF.Settings = UPF.Settings or {}
 
-UPF.State = UPF.State or {}
+local FILE = "upf_config.json"
 
--- =========================
--- DEFAULT SETTINGS
--- =========================
-
-local Settings = {
-    protection_enabled = true,
-    godmode_enabled = false,
-    smart_mode = "SAFE",
-    noclip_players = false
-}
-
--- =========================
--- FILE HELPERS
--- =========================
-
-local function try_readfile(path)
+local function safeRead()
     if type(readfile) ~= "function" then return nil end
-    local ok, content = pcall(readfile, path)
-    return ok and content or nil
+    local ok, data = pcall(readfile, FILE)
+    if ok then return data end
 end
 
-local function try_writefile(path, content)
+local function safeWrite(data)
     if type(writefile) ~= "function" then return false end
-    return pcall(writefile, path, content)
+    return pcall(writefile, FILE, data)
 end
-
--- =========================
--- LOAD
--- =========================
 
 function UPF:LoadSettings()
+    local raw = safeRead()
+    if not raw then return end
 
-    local src = try_readfile(SETTINGS_FILENAME) or _G.UPF_LOCAL_SETTINGS
-    if not src then return false end
-
-    local ok, parsed = pcall(function()
-        return HttpService:JSONDecode(src)
+    local ok, data = pcall(function()
+        return HttpService:JSONDecode(raw)
     end)
 
-    if not ok or type(parsed) ~= "table" then return false end
-
-    for k,v in pairs(parsed) do
-        Settings[k] = v
+    if ok and type(data) == "table" then
+        for k,v in pairs(data) do
+            UPF.Settings[k] = v
+        end
+        print("✅ Settings loaded")
     end
-
-    -- 🔥 APLICAR A UPF.STATE (CLAVE)
-    UPF.State.ProtectionEnabled = Settings.protection_enabled
-    UPF.State.GodMode = Settings.godmode_enabled
-    UPF.State.SmartMode = Settings.smart_mode
-    UPF.State.NoClipPlayers = Settings.noclip_players
-
-    print("✅ Settings loaded into UPF.State")
-
-    return true
 end
-
--- =========================
--- SAVE
--- =========================
 
 function UPF:SaveSettings()
+    local encoded = HttpService:JSONEncode(UPF.Settings)
 
-    -- 🔥 LEER DESDE UPF.STATE
-    Settings.protection_enabled = UPF.State.ProtectionEnabled
-    Settings.godmode_enabled = UPF.State.GodMode
-    Settings.smart_mode = UPF.State.SmartMode
-    Settings.noclip_players = UPF.State.NoClipPlayers
-
-    local encoded = HttpService:JSONEncode(Settings)
-
-    local ok = try_writefile(SETTINGS_FILENAME, encoded)
-    if not ok then
+    local ok = safeWrite(encoded)
+    if ok then
+        print("💾 Settings saved")
+    else
         _G.UPF_LOCAL_SETTINGS = encoded
+        print("⚠️ Saved locally (fallback)")
     end
-
-    print("💾 Settings saved")
-
-    return ok
 end
 
--- =========================
--- AUTO LOAD (SEGURO)
--- =========================
+-- LOAD AUTOMÁTICO
+UPF:LoadSettings()
 
-task.spawn(function()
-    repeat task.wait() until UPF and UPF.State
-    UPF:LoadSettings()
-end)
-
-print("✅ Settings PRO loaded")
+print("✅ Settings loaded")
