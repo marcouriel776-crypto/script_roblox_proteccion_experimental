@@ -1,0 +1,12 @@
+pcall(function()
+    print(" ")
+    print("==========================================")
+    print("UPF Protection Framework UI loaded")
+    print("Author: Sourcerer")
+    print("Co-Developer: ChatGPT")
+    print("Repository: script_roblox_proteccion_experimental")
+    print("==========================================")
+    print(" ")
+end)
+
+print("✅ Credits loader")
