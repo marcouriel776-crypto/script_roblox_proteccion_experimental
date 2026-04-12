@@ -17,4 +17,4 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("✅ Smart ULTRA CLEAN loaded")
+print("✅ Smart Loader")
