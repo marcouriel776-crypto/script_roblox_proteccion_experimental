@@ -10,6 +10,7 @@ UPF.State = UPF.State or {}
 UPF.Connections = UPF.Connections or {}
 
 local MODULES = {
+    "credits.lua",
     "module_core.lua",
     "module_utils.lua",
     "module_settings.lua",
