@@ -27,4 +27,4 @@ function UPF:ReturnToSafePoint()
     end
 end
 
-print("✅ Recovery CLEAN loaded")
+print("✅ Recovery loaded")
