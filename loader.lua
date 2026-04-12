@@ -22,6 +22,7 @@ local MODULES = {
     "module_resilience.lua",
     "module_noclip_players.lua",
     "module_ui.lua"
+    "module_modal_manager.lua",
 }
 
 -- =========================
