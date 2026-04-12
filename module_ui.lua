@@ -36,4 +36,4 @@ Rayfield:Notify({
    Duration = 3
 })
 
-print("✅ UI PRO CLEAN loaded")
+print("✅ UI loaded")
