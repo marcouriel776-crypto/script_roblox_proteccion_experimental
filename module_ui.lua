@@ -1,155 +1,39 @@
--- module_ui.lua (UPF UI PRO CLEAN)
-
--- =========================
--- LOAD RAYFIELD (SAFE)
--- =========================
-
-local success, Rayfield = pcall(function()
-    return loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-end)
-
-if not success or not Rayfield then
-    warn("❌ Rayfield failed to load")
-    return
-end
-
--- =========================
--- WAIT FOR UPF (CRÍTICO)
--- =========================
-
-repeat task.wait() until _G.UPF and _G.UPF.State
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local UPF = _G.UPF
 
-print("✅ UPF detected in UI")
+local Window = Rayfield:CreateWindow({
+   Name = "UPF PRO",
+   LoadingTitle = "UPF",
+   LoadingSubtitle = "System"
+})
 
--- =========================
--- SAFE CALL HELPER
--- =========================
+local Main = Window:CreateTab("Main", 0)
+local Debug = Window:CreateTab("Debug", 0)
 
-local function safeCall(func, ...)
-    if typeof(func) == "function" then
-        local ok, err = pcall(func, ...)
-        if not ok then
-            warn("UI Callback Error:", err)
-        end
-    else
-        warn("UI tried to call nil function")
-    end
+Main:CreateToggle({
+   Name = "God Mode",
+   CurrentValue = false,
+   Callback = function(v)
+      UPF:ToggleGodMode(v)
+   end
+})
+
+Main:CreateButton({
+   Name = "Recover",
+   Callback = function()
+      UPF:RecoverPlayer()
+   end
+})
+
+-- DEBUG REAL
+for mod, data in pairs(UPF.LoadResults or {}) do
+    Debug:CreateLabel((data.success and "✅ " or "❌ ") .. mod)
 end
 
--- =========================
--- WINDOW
--- =========================
-
-local Window = Rayfield:CreateWindow({
-   Name = "🛡 UPF Protection",
-   LoadingTitle = "UPF System",
-   LoadingSubtitle = "by Marco & Uriel",
-   ConfigurationSaving = {
-      Enabled = true,
-      FolderName = "UPF_Config",
-      FileName = "settings"
-   },
-   KeySystem = false
-})
-
--- =========================
--- TABS
--- =========================
-
-local MainTab = Window:CreateTab("Main", 4483362458)
-local ProtectionTab = Window:CreateTab("Protection", 4483362458)
-local MiscTab = Window:CreateTab("Misc", 4483362458)
-
--- =========================
--- MAIN
--- =========================
-
-MainTab:CreateToggle({
-   Name = "💚 God Mode",
-   CurrentValue = false,
-   Callback = function(Value)
-      safeCall(UPF.ToggleGodMode, UPF, Value)
-   end,
-})
-
-MainTab:CreateButton({
-   Name = "📍 Recover Player",
-   Callback = function()
-      safeCall(UPF.RecoverPlayer, UPF)
-   end,
-})
-
-MainTab:CreateButton({
-   Name = "🧹 Reset Velocity",
-   Callback = function()
-      if UPF.RootPart then
-         UPF.RootPart.AssemblyLinearVelocity = Vector3.zero
-      end
-   end,
-})
-
--- =========================
--- PROTECTION
--- =========================
-
-ProtectionTab:CreateToggle({
-   Name = "🛡 Enable Protection",
-   CurrentValue = true,
-   Callback = function(Value)
-      if UPF.State then
-         UPF.State.ProtectionEnabled = Value
-      end
-   end,
-})
-
-ProtectionTab:CreateDropdown({
-   Name = "🧠 Smart Mode",
-   Options = {"SAFE", "AGGRESSIVE"},
-   CurrentOption = UPF.State.SmartMode or "SAFE",
-   Callback = function(Option)
-      if UPF.State then
-         UPF.State.SmartMode = Option
-      end
-   end,
-})
-
-ProtectionTab:CreateToggle({
-   Name = "🚫 NoClip Players",
-   CurrentValue = false,
-   Callback = function(Value)
-      if UPF.State then
-         UPF.State.NoClipPlayers = Value
-      end
-   end,
-})
-
--- =========================
--- MISC
--- =========================
-
-MiscTab:CreateButton({
-   Name = "🔄 Rejoin Server",
-   Callback = function()
-      game:GetService("TeleportService"):Teleport(game.PlaceId)
-   end,
-})
-
-MiscTab:CreateButton({
-   Name = "❌ Destroy UI",
-   Callback = function()
-      Rayfield:Destroy()
-   end,
-})
-
--- =========================
--- NOTIFY
--- =========================
-
 Rayfield:Notify({
-   Title = "UPF Loaded",
-   Content = "Sistema listo sin errores",
-   Duration = 4,
+   Title = "UPF",
+   Content = "Loaded",
+   Duration = 3
 })
 
 print("✅ UI PRO CLEAN loaded")
