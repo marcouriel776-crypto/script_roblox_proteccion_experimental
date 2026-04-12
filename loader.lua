@@ -1,5 +1,3 @@
--- loader_pro.lua (ULTRA CLEAN)
-
 local BASE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
 
 getgenv().UPF = getgenv().UPF or {}
