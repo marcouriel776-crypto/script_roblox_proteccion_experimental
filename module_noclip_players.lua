@@ -1,31 +1,29 @@
--- module_noclip_players.lua (CLIENT SAFE)
-
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local PhysicsService = game:GetService("PhysicsService")
 
-local LocalPlayer = Players.LocalPlayer
+pcall(function()
+    PhysicsService:CreateCollisionGroup("Players")
+end)
 
--- =========================
+PhysicsService:CollisionGroupSetCollidable("Players","Players",false)
 
-local function setNoCollision(char)
+local function apply(char)
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.CanCollide = false
+            PhysicsService:SetPartCollisionGroup(part,"Players")
         end
     end
 end
 
--- =========================
+for _, plr in ipairs(Players:GetPlayers()) do
+    if plr.Character then apply(plr.Character) end
+end
 
-RunService.Stepped:Connect(function()
-    local myChar = LocalPlayer.Character
-    if not myChar then return end
-
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character then
-            setNoCollision(plr.Character)
-        end
-    end
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function(char)
+        task.wait(1)
+        apply(char)
+    end)
 end)
 
 print("✅ NoClip Players (client-safe) loaded")
