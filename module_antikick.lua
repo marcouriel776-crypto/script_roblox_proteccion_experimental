@@ -16,4 +16,4 @@ end)
 
 setreadonly(mt, true)
 
-print("AntiKick v2 loaded")
+print("✅ AntiKick loaded")
