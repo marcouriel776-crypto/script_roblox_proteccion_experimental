@@ -1,107 +1,73 @@
--- module_upf_api.lua
--- UPF API bootstrap (clean version)
--- Proporciona funciones seguras (stubs) para que la UI no falle
--- NO incluye reconnect ni teleport
+-- module_upf_api.lua (CORE API)
 
-_G.UPF = _G.UPF or {}
 local UPF = _G.UPF
-
--- Tablas base
-UPF.State = UPF.State or {}
-UPF.Settings = UPF.Settings or {}
-UPF.Connections = UPF.Connections or {}
+if not UPF then return end
 
 -- =========================
--- Helpers
+-- SAFE CALL
 -- =========================
 
-local function makeToggleStub(stateKey, niceName)
-    return function(self, on)
-        if on == nil then
-            UPF.State[stateKey] = not (UPF.State[stateKey])
-        else
-            UPF.State[stateKey] = (on and true) or false
-        end
-
-        print(("UPF (stub): %s -> %s"):format(
-            niceName or stateKey,
-            tostring(UPF.State[stateKey])
-        ))
-
-        return UPF.State[stateKey]
+function UPF:SafeCall(fn, ...)
+    if type(fn) ~= "function" then return end
+    local ok, err = pcall(fn, ...)
+    if not ok then
+        warn("[UPF Error]:", err)
     end
 end
 
 -- =========================
--- STUBS SEGUROS
+-- STATE HELPERS
 -- =========================
 
-if not UPF.ToggleProtection then
-    UPF.ToggleProtection = makeToggleStub("ProtectionEnabled", "Protection")
+function UPF:IsReady()
+    return UPF.State and UPF.State.CharacterReady
 end
 
-if not UPF.ToggleGodMode then
-    UPF.ToggleGodMode = makeToggleStub("GodMode", "GodMode")
+function UPF:IsProtectionEnabled()
+    return UPF.State and UPF.State.ProtectionEnabled
 end
 
-if not UPF.ReturnToSafePoint then
-    UPF.ReturnToSafePoint = function()
-        print("UPF (stub): ReturnToSafePoint (no impl yet)")
-    end
+-- =========================
+-- MODULE CONTROL
+-- =========================
+
+function UPF:IsModuleLoaded(name)
+    return UPF.Modules and UPF.Modules[name]
 end
 
-if not UPF.RecoverPlayer then
-    UPF.RecoverPlayer = function()
-        print("UPF (stub): RecoverPlayer (no impl yet)")
-    end
-end
+-- =========================
+-- DEBUG
+-- =========================
 
--- Audio Shield
-if not UPF.ToggleAudioShield then
-    UPF.ToggleAudioShield = function()
-        UPF.State.Audio = UPF.State.Audio or {}
-        UPF.State.Audio.Enabled = not (UPF.State.Audio.Enabled)
-
-        print("UPF (stub): AudioShield ->", UPF.State.Audio.Enabled)
-    end
-end
-
-if not UPF.SetAudioShieldRadius then
-    UPF.SetAudioShieldRadius = function(r)
-        UPF.State.Audio = UPF.State.Audio or {}
-        UPF.State.Audio.Radius = tonumber(r) or 20
-
-        print("UPF (stub): Audio Radius ->", UPF.State.Audio.Radius)
-    end
-end
-
-if not UPF.SetAudioShieldLevel then
-    UPF.SetAudioShieldLevel = function(l)
-        UPF.State.Audio = UPF.State.Audio or {}
-        UPF.State.Audio.Level = tonumber(l) or 0.25
-
-        print("UPF (stub): Audio Level ->", UPF.State.Audio.Level)
-    end
-end
-
--- Guardado
-if not UPF.SaveSettings then
-    UPF.SaveSettings = function()
-        print("UPF (stub): SaveSettings (no filesystem)")
+function UPF:PrintModules()
+    for mod, data in pairs(UPF.LoadResults or {}) do
+        print(mod, data.success and "✅" or "❌")
     end
 end
 
 -- =========================
--- FLAGS IMPORTANTES
+-- LOOP CONTROL (PRO 🔥)
 -- =========================
 
--- SOLO RECOVERY LOCAL
-UPF.State.Resilience = UPF.State.Resilience or {}
+UPF.Loops = UPF.Loops or {}
 
--- Esto ahora SOLO controla el sistema de anti-stuck
-UPF.State.Resilience.enabled = (UPF.State.Resilience.enabled ~= false)
+function UPF:BindLoop(name, fn)
+    if UPF.Loops[name] then
+        UPF.Loops[name]:Disconnect()
+    end
 
--- NO reconnect, NO teleport
-UPF.State.Resilience.allow_reconnect = false
+    local RunService = game:GetService("RunService")
 
-print("✅ module_upf_api loaded (clean, no reconnect)")
+    UPF.Loops[name] = RunService.Heartbeat:Connect(function()
+        self:SafeCall(fn)
+    end)
+end
+
+function UPF:UnbindLoop(name)
+    if UPF.Loops[name] then
+        UPF.Loops[name]:Disconnect()
+        UPF.Loops[name] = nil
+    end
+end
+
+print("✅ UPF API loaded")
