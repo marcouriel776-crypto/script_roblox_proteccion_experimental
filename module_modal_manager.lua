@@ -20,7 +20,7 @@ local mt = getrawmetatable(game)
 local config = {
     -- Anti-Kick
     ENABLE_ANTI_KICK = true,
-    ALLOW_SERVER_KICK = false,       -- Permite kicks legítimos (evita baneos)
+    ALLOW_SERVER_KICK = true,       -- Permite kicks legítimos (evita baneos)
     LOG_KICKS = false,              -- Desactivado para stealth
     RANDOMIZE_HOOK = true,          -- Aleatoriza el momento de activación
     
