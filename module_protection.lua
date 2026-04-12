@@ -36,4 +36,4 @@ RunService.Heartbeat:Connect(function()
     lastPos = pos
 end)
 
-print("✅ AntiTeleport ULTRA STABLE loaded")
+print("✅ AntiTeleport loaded")
