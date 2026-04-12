@@ -231,4 +231,4 @@ getgenv().UPFProtection = {
 -- Iniciar automáticamente
 init()
 
-print("✅ UPF Protection Suite v4.0 cargado.")
+print("✅ client-safe loaded")
