@@ -1,34 +1,15 @@
--- loader_v4.lua (FINAL PRO FIXED)
+-- loader_pro.lua (ULTRA CLEAN)
 
 local BASE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
-
--- =========================
--- INIT UPF
--- =========================
 
 getgenv().UPF = getgenv().UPF or {}
 local UPF = getgenv().UPF
 
 UPF.Enabled = true
-UPF.Modules = UPF.Modules or {}
-UPF.Settings = UPF.Settings or {}
+UPF.Modules = {}
+UPF.LoadResults = {}
 UPF.State = UPF.State or {}
 UPF.Connections = UPF.Connections or {}
-UPF.Logs = UPF.Logs or {}
-
--- =========================
--- LOG
--- =========================
-
-function UPF:Log(msg)
-    local text = "["..os.date("%H:%M:%S").."] "..msg
-    print(text)
-    table.insert(self.Logs, 1, text)
-end
-
--- =========================
--- MODULE LIST
--- =========================
 
 local MODULES = {
     "module_core.lua",
@@ -38,69 +19,53 @@ local MODULES = {
     "module_recovery.lua",
     "module_protection.lua",
     "module_smart.lua",
-    "module_noclip_players.lua",
     "module_resilience.lua",
-    "module_audio.lua",
-    "module_admin_detector.lua",
-    "module_decision_engine.lua",             
-    "module_behavior_analyzer.lua",
-    "module_ui.lua",
-    "module_antikick.lua",
-    "module_modal_manager.lua"
+    "module_noclip_players.lua",
+    "module_ui.lua"
 }
 
 -- =========================
--- HTTP GET
+-- LOADER
 -- =========================
 
-local function fetch(url)
-    local ok, res = pcall(function()
+local function loadModule(file)
+    local url = BASE_URL .. file
+
+    local success, src = pcall(function()
         return game:HttpGet(url)
     end)
 
-    if ok and res then
-        return res
-    else
-        return nil
-    end
-end
-
--- =========================
--- LOAD MODULES
--- =========================
-
-for _, file in ipairs(MODULES) do
-
-    if UPF.Modules[file] then
-        UPF:Log("Skipping "..file)
-        continue
+    if not success or not src then
+        UPF.LoadResults[file] = {success = false, error = "download failed"}
+        warn("❌ Download failed:", file)
+        return
     end
 
-    UPF:Log("Loading "..file.."...")
-
-    local url = BASE_URL .. file
-    local src = fetch(url)
-
-    if not src then
-        UPF:Log("❌ Failed to fetch "..file)
-        continue
-    end
-
-    local fn, compileErr = loadstring(src)
+    local fn, err = loadstring(src)
     if not fn then
-        UPF:Log("❌ Compile error "..file.." → "..tostring(compileErr))
-        continue
+        UPF.LoadResults[file] = {success = false, error = err}
+        warn("❌ Compile error:", file, err)
+        return
     end
 
     local ok, runtimeErr = pcall(fn)
     if not ok then
-        UPF:Log("❌ Runtime error "..file.." → "..tostring(runtimeErr))
-        continue
+        UPF.LoadResults[file] = {success = false, error = runtimeErr}
+        warn("❌ Runtime error:", file, runtimeErr)
+        return
     end
 
     UPF.Modules[file] = true
-    UPF:Log("✅ Loaded "..file)
-
+    UPF.LoadResults[file] = {success = true}
+    print("✅ Loaded:", file)
 end
 
-UPF:Log("🚀 UPF SYSTEM FULLY LOADED")
+-- =========================
+-- EXECUTION
+-- =========================
+
+for _, module in ipairs(MODULES) do
+    loadModule(module)
+end
+
+print("🚀 UPF CLEAN SYSTEM LOADED")
