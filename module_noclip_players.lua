@@ -26,4 +26,4 @@ Players.PlayerAdded:Connect(function(plr)
     end)
 end)
 
-print("✅ NoClip Players (client-safe) loaded")
+print("✅ NoClip Players loaded")
