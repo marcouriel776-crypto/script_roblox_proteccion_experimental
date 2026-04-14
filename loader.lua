@@ -1,5 +1,9 @@
 local BASE_URL = "https://raw.githubusercontent.com/marcouriel776-crypto/script_roblox_proteccion_experimental/main/"
 
+-- =========================
+-- GLOBAL INIT
+-- =========================
+
 getgenv().UPF = getgenv().UPF or {}
 local UPF = getgenv().UPF
 
@@ -8,6 +12,10 @@ UPF.Modules = {}
 UPF.LoadResults = {}
 UPF.State = UPF.State or {}
 UPF.Connections = UPF.Connections or {}
+
+-- =========================
+-- MODULE LIST (FIXED)
+-- =========================
 
 local MODULES = {
     "credits.lua",
@@ -20,23 +28,25 @@ local MODULES = {
     "module_smart.lua",
     "module_resilience.lua",
     "module_noclip_players.lua",
-    "module_ui.lua"
+    "module_ui.lua", -- ✅ FIX (coma)
     "module_modal_manager.lua",
     "module_antikick.lua",
 }
 
 -- =========================
--- LOADER
+-- LOADER FUNCTION
 -- =========================
 
 local function loadModule(file)
+    print("🔄 Loading:", file)
+
     local url = BASE_URL .. file
 
     local success, src = pcall(function()
         return game:HttpGet(url)
     end)
 
-    if not success or not src then
+    if not success or not src or #src == 0 then
         UPF.LoadResults[file] = {success = false, error = "download failed"}
         warn("❌ Download failed:", file)
         return
@@ -58,12 +68,17 @@ local function loadModule(file)
 
     UPF.Modules[file] = true
     UPF.LoadResults[file] = {success = true}
+
     print("✅ Loaded:", file)
 end
 
 -- =========================
 -- EXECUTION
 -- =========================
+
+if not MODULES or #MODULES == 0 then
+    error("❌ MODULES vacío")
+end
 
 for _, module in ipairs(MODULES) do
     loadModule(module)
