@@ -4,7 +4,7 @@ local RunService = game:GetService("RunService")
 local UPF = _G.UPF
 UPF.State.DangerousPlayers = {}
 
-RunService.Heartbeat:Connect(function()
+UPF.Scheduler:AddTask("Smart", 0.3, function()
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= Players.LocalPlayer then
             local char = plr.Character
