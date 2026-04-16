@@ -19,6 +19,7 @@ UPF.Connections = UPF.Connections or {}
 
 local MODULES = {
     "credits.lua",
+    "module_scheduler.lua",
     "module_core.lua",
     "module_utils.lua",
     "module_settings.lua",
@@ -27,7 +28,7 @@ local MODULES = {
     "module_protection.lua",
     "module_smart.lua",
     "module_resilience.lua",
-    "module_noclip_players.lua",
+    --"module_noclip_players.lua",
     "module_ui.lua", -- ✅ FIX (coma)
     "module_modal_manager.lua",
     "module_antikick.lua",
