@@ -7,7 +7,7 @@ local UPF = _G.UPF
 local lastPos = nil
 local safeCFrame = nil
 
-RunService.Heartbeat:Connect(function()
+UPF.Scheduler:AddTask("Protection", 0.1, function()
     if not UPF.State.ProtectionEnabled then return end
 
     local char = player.Character
