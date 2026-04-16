@@ -29,9 +29,9 @@ local MODULES = {
     "module_smart.lua",
     "module_resilience.lua",
     --"module_noclip_players.lua",
-    "module_ui.lua", -- ✅ FIX (coma)
-    "module_modal_manager.lua",
-    "module_antikick.lua",
+    "module_ui.lua",
+    --"module_modal_manager.lua",
+    --"module_antikick.lua",
 }
 
 -- =========================
