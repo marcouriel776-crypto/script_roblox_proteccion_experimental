@@ -7,7 +7,7 @@ local UPF = _G.UPF
 local lastPos
 local lastMove = tick()
 
-RunService.Heartbeat:Connect(function()
+UPF.Scheduler:AddTask("Resilience", 0.2, function()
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
