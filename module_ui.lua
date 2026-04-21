@@ -1,6 +1,7 @@
 local UPF = _G.UPF
-local Assets = UPF.Assets
+local Scanner = UPF.Scanner
 local Visual = UPF.Visual
+local Devil = UPF.Devil
 
 local player = game.Players.LocalPlayer
 local Lighting = game:GetService("Lighting")
@@ -14,13 +15,16 @@ local gui = Instance.new("ScreenGui")
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0, 280, 0, 380)
+frame.Size = UDim2.new(0, 300, 0, 420)
 frame.Position = UDim2.new(0.05, 0, 0.3, 0)
 frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
 frame.BorderSizePixel = 0
 
+-- =========================
 -- DRAG
-local dragging, dragInput, startPos, startInputPos
+-- =========================
+
+local dragging, startPos, startInputPos
 
 frame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -62,7 +66,6 @@ title.Text = "UPF PRO MAX"
 title.TextColor3 = Color3.new(1,1,1)
 title.BackgroundTransparency = 1
 
--- MINIMIZE
 local minimized = false
 
 local minBtn = Instance.new("TextButton", top)
@@ -70,7 +73,6 @@ minBtn.Size = UDim2.new(0,30,1,0)
 minBtn.Position = UDim2.new(1,-60,0,0)
 minBtn.Text = "_"
 
--- CLOSE
 local closeBtn = Instance.new("TextButton", top)
 closeBtn.Size = UDim2.new(0,30,1,0)
 closeBtn.Position = UDim2.new(1,-30,0,0)
@@ -95,7 +97,7 @@ layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 end)
 
 -- =========================
--- BUTTON
+-- BUTTON CREATOR
 -- =========================
 
 local function createButton(text, callback)
@@ -111,58 +113,101 @@ local function createButton(text, callback)
 end
 
 -- =========================
--- EFFECT STATE
+-- STATES
 -- =========================
 
 local effectsEnabled = true
 local rgbEnabled = false
 
+-- =========================
+-- BASIC CONTROLS
+-- =========================
+
 createButton("🟢 Toggle Effects", function()
     effectsEnabled = not effectsEnabled
-
     if not effectsEnabled then
         Visual:Clear()
     end
 end)
 
--- =========================
--- CLEAR
--- =========================
-
-createButton("❌ Clear", function()
+createButton("❌ Clear Effects", function()
     Visual:Clear()
 end)
 
 -- =========================
--- PARTICLES
+-- SCANNER
 -- =========================
 
-for i, p in ipairs(Assets.Particles) do
-    if i > 25 then break end
-
-    createButton("✨ Particle "..i, function()
-        if effectsEnabled then
-            Visual:ApplyParticle(p)
-        end
-    end)
-end
+createButton("🔍 Scan Game", function()
+    Scanner:Scan()
+end)
 
 -- =========================
--- SOUNDS
+-- SERVER PARTICLES
 -- =========================
 
-for i, s in ipairs(Assets.Sounds) do
-    if i > 15 then break end
+createButton("🟢 Server Particles", function()
+    for i, p in ipairs(Scanner.Results.Server.Particles) do
+        if i > 20 then break end
 
-    createButton("🔊 Sound "..i, function()
-        if effectsEnabled then
-            Visual:PlaySound(s)
-        end
-    end)
-end
+        createButton("✨ S_P "..i, function()
+            if effectsEnabled then
+                Visual:ApplyParticle(p)
+            end
+        end)
+    end
+end)
 
 -- =========================
--- 🌈 RGB CONTROL
+-- LOCAL PARTICLES
+-- =========================
+
+createButton("👁 Local Particles", function()
+    for i, p in ipairs(Scanner.Results.Local.Particles) do
+        if i > 20 then break end
+
+        createButton("✨ L_P "..i, function()
+            if effectsEnabled then
+                Visual:ApplyParticle(p)
+            end
+        end)
+    end
+end)
+
+-- =========================
+-- SERVER SOUNDS
+-- =========================
+
+createButton("🔊 Server Sounds", function()
+    for i, s in ipairs(Scanner.Results.Server.Sounds) do
+        if i > 15 then break end
+
+        createButton("🔊 S_S "..i, function()
+            if effectsEnabled then
+                Visual:PlaySound(s)
+            end
+        end)
+    end
+end)
+
+-- =========================
+-- LOCAL SOUNDS
+-- =========================
+
+createButton("👁 Local Sounds", function()
+    for i, s in ipairs(Scanner.Results.Local.Sounds) do
+        if i > 15 then break end
+
+        createButton("🔊 L_S "..i, function()
+            if effectsEnabled then
+                Visual:PlaySound(s)
+            end
+        end)
+    end
+end)
+
+-- =========================
+-- RGB MODE
 -- =========================
 
 createButton("🌈 Toggle RGB", function()
@@ -181,7 +226,7 @@ createButton("🌈 Toggle RGB", function()
 end)
 
 -- =========================
--- 🌞 LIGHT MODES
+-- LIGHTING
 -- =========================
 
 createButton("🌞 Bright", function()
@@ -201,34 +246,19 @@ createButton("⚡ Reset Light", function()
 end)
 
 -- =========================
--- 😈 AURA GOD MODE
+-- DEVIL MODE
 -- =========================
 
-createButton("😈 AURA GOD", function()
-    if not effectsEnabled then return end
-
-    local root = UPF.Root
-    if not root then return end
-
-    Visual:Clear()
-
-    -- PARTICLE
-    if Assets.Particles[1] then
-        Visual:ApplyParticle(Assets.Particles[1])
+createButton("😈 DEVIL MODE", function()
+    if Devil and Devil.Enabled then
+        Devil:Disable()
+    else
+        Devil:Enable()
     end
-
-    -- SOUND
-    if Assets.Sounds[1] then
-        Visual:PlaySound(Assets.Sounds[1])
-    end
-
-    -- LIGHT
-    Lighting.Brightness = 4
-    Lighting.Ambient = Color3.fromRGB(0, 255, 150)
 end)
 
 -- =========================
--- MIN / CLOSE LOGIC
+-- MIN / CLOSE
 -- =========================
 
 minBtn.MouseButton1Click:Connect(function()
@@ -240,4 +270,4 @@ closeBtn.MouseButton1Click:Connect(function()
     gui:Destroy()
 end)
 
-print("🔥 UI PRO MAX + GOD LOADED")
+print("🔥 UI FULL PRO MAX LOADED")
