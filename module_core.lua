@@ -4,40 +4,20 @@ local LocalPlayer = Players.LocalPlayer
 _G.UPF = _G.UPF or {}
 local UPF = _G.UPF
 
-UPF.State = UPF.State or {}
-UPF.Connections = UPF.Connections or {}
+UPF.Character = nil
+UPF.Root = nil
 
-UPF.State.ScriptRunning = true
-UPF.State.ProtectionEnabled = true
-UPF.State.CharacterReady = false
+local function setup(char)
+    local root = char:WaitForChild("HumanoidRootPart")
 
-UPF.RootPart = nil
-UPF.Humanoid = nil
-
-local function SetupCharacter(char)
-    if not char then return end
-
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    local hum = char:WaitForChild("Humanoid")
-
-    UPF.RootPart = hrp
-    UPF.Humanoid = hum
-    UPF.State.CharacterReady = true
+    UPF.Character = char
+    UPF.Root = root
 
     print("✅ Character ready")
 end
 
-if UPF.Connections.CharacterAdded then
-    UPF.Connections.CharacterAdded:Disconnect()
-end
-
-UPF.Connections.CharacterAdded = LocalPlayer.CharacterAdded:Connect(function(char)
-    UPF.State.CharacterReady = false
-    SetupCharacter(char)
-end)
+LocalPlayer.CharacterAdded:Connect(setup)
 
 if LocalPlayer.Character then
-    SetupCharacter(LocalPlayer.Character)
+    setup(LocalPlayer.Character)
 end
-
-print("✅ Core loaded")
