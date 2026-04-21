@@ -4,6 +4,9 @@ local LocalPlayer = Players.LocalPlayer
 _G.UPF = _G.UPF or {}
 local UPF = _G.UPF
 
+UPF.Modules = UPF.Modules or {}
+UPF.State = UPF.State or {}
+UPF.Connections = UPF.Connections or {}
 UPF.Character = nil
 UPF.Humanoid = nil
 UPF.Root = nil
