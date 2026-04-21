@@ -19,19 +19,20 @@ UPF.Connections = UPF.Connections or {}
 
 local MODULES = {
     "credits.lua",
-    "module_scheduler.lua",
+    --"module_scheduler.lua",
     "module_core.lua",
-    "module_utils.lua",
-    "module_settings.lua",
-    "module_upf_api.lua",
-    "module_recovery.lua",
-    "module_protection.lua",
-    "module_smart.lua",
-    "module_resilience.lua",
+    --"module_utils.lua",
+    --"module_settings.lua",
+    --"module_upf_api.lua",
+    --"module_recovery.lua",
+    --"module_protection.lua",
+    --"module_smart.lua",
+    --"module_resilience.lua",
     --"module_noclip_players.lua",
     "module_ui.lua",
     --"module_modal_manager.lua",
     --"module_antikick.lua",
+    "module_visual.lua",
 }
 
 -- =========================
