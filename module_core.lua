@@ -1,16 +1,23 @@
 local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
 _G.UPF = _G.UPF or {}
 local UPF = _G.UPF
 
-local function setup(char)
+UPF.Character = nil
+UPF.Humanoid = nil
+UPF.Root = nil
+
+local function Setup(char)
+    UPF.Character = char
+    UPF.Humanoid = char:WaitForChild("Humanoid")
     UPF.Root = char:WaitForChild("HumanoidRootPart")
-    print("✅ Character ready")
 end
 
-player.CharacterAdded:Connect(setup)
-
-if player.Character then
-    setup(player.Character)
+if LocalPlayer.Character then
+    Setup(LocalPlayer.Character)
 end
+
+LocalPlayer.CharacterAdded:Connect(Setup)
+
+print("✅ Core loaded")
