@@ -1,5 +1,4 @@
-local UPF = _G.UPF or {}
-_G.UPF = UPF
+local UPF = _G.UPF
 
 UPF.Assets = {
     Sounds = {},
@@ -7,35 +6,22 @@ UPF.Assets = {
     Decals = {}
 }
 
-local function addUnique(tbl, value)
-    if value and value ~= "" and not table.find(tbl, value) then
-        table.insert(tbl, value)
-    end
-end
+local Assets = UPF.Assets
 
-local function scan()
-    print("🔍 Scanning game assets...")
+for _, v in ipairs(game:GetDescendants()) do
 
-    for _, v in ipairs(game:GetDescendants()) do
-
-        if v:IsA("Sound") then
-            addUnique(UPF.Assets.Sounds, v.SoundId)
-        end
-
-        if v:IsA("ParticleEmitter") then
-            addUnique(UPF.Assets.Particles, v.Texture)
-        end
-
-        if v:IsA("Decal") then
-            addUnique(UPF.Assets.Decals, v.Texture)
-        end
-
+    if v:IsA("Sound") and v.SoundId ~= "" then
+        table.insert(Assets.Sounds, v)
     end
 
-    print("✅ Scan complete")
-    print("🎧 Sounds:", #UPF.Assets.Sounds)
-    print("💨 Particles:", #UPF.Assets.Particles)
-    print("🖼 Decals:", #UPF.Assets.Decals)
+    if v:IsA("ParticleEmitter") and v.Texture ~= "" then
+        table.insert(Assets.Particles, v)
+    end
+
+    if v:IsA("Decal") and v.Texture ~= "" then
+        table.insert(Assets.Decals, v)
+    end
+
 end
 
-task.spawn(scan)
+print("✅ Assets:", #Assets.Sounds, #Assets.Particles, #Assets.Decals)
