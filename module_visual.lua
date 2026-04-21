@@ -1,44 +1,60 @@
 local UPF = _G.UPF
-if not UPF then return end
+local Visual = {}
 
-UPF.Visual = {}
-local Visual = UPF.Visual
+Visual.Current = nil
 
-Visual.Enabled = false
+local function fixCamera()
+    local char = UPF.Character
+    if not char then return end
 
-function Visual:ApplyParticle(texture)
-    local root = UPF.Root
-    if not root then return end
-
-    self:Clear()
-
-    local attach = Instance.new("Attachment", root)
-
-    local p = Instance.new("ParticleEmitter")
-    p.Texture = texture
-    p.Rate = 25
-    p.Lifetime = NumberRange.new(1)
-    p.Parent = attach
-end
-
-function Visual:PlaySound(id)
-    local root = UPF.Root
-    if not root then return end
-
-    local sound = Instance.new("Sound")
-    sound.SoundId = id
-    sound.Volume = 1
-    sound.Parent = root
-    sound:Play()
+    local hum = UPF.Humanoid
+    if hum then
+        workspace.CurrentCamera.CameraSubject = hum
+    end
 end
 
 function Visual:Clear()
+    if self.Current then
+        self.Current:Destroy()
+        self.Current = nil
+    end
+
+    fixCamera()
+end
+
+function Visual:ApplyParticle(p)
+    self:Clear()
+
     local root = UPF.Root
     if not root then return end
 
-    for _, v in ipairs(root:GetChildren()) do
-        if v:IsA("Attachment") or v:IsA("Sound") then
-            v:Destroy()
-        end
+    local attach = Instance.new("Attachment")
+    attach.Parent = root
+
+    local clone = p:Clone()
+    clone.Parent = attach
+
+    if clone:IsA("ParticleEmitter") then
+        clone.Enabled = true
+        clone.Rate = math.clamp(clone.Rate, 0, 50) -- anti lag
     end
+
+    self.Current = attach
 end
+
+function Visual:PlaySound(s)
+    self:Clear()
+
+    local root = UPF.Root
+    if not root then return end
+
+    local sound = s:Clone()
+    sound.Parent = root
+    sound:Play()
+
+    self.Current = sound
+end
+
+UPF.Visual = Visual
+
+print("✅ Visual loaded")
