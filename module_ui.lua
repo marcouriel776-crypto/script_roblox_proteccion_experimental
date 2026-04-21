@@ -1,39 +1,26 @@
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local UPF = _G.UPF
+if not UPF then return end
 
-local Window = Rayfield:CreateWindow({
-   Name = "UPF PRO",
-   LoadingTitle = "UPF",
-   LoadingSubtitle = "System"
+local Visual = UPF.Visual
+
+-- ejemplo básico sin Rayfield (más estable)
+game.StarterGui:SetCore("SendNotification", {
+    Title = "UPF",
+    Text = "Script cargado",
+    Duration = 3
 })
 
-local Main = Window:CreateTab("Main", 0)
-local Debug = Window:CreateTab("Debug", 0)
+-- tecla para activar
+local UIS = game:GetService("UserInputService")
 
-Main:CreateToggle({
-   Name = "God Mode",
-   CurrentValue = false,
-   Callback = function(v)
-      UPF:ToggleGodMode(v)
-   end
-})
-
-Main:CreateButton({
-   Name = "Recover",
-   Callback = function()
-      UPF:RecoverPlayer()
-   end
-})
-
--- DEBUG REAL
-for mod, data in pairs(UPF.LoadResults or {}) do
-    Debug:CreateLabel((data.success and "✅ " or "❌ ") .. mod)
-end
-
-Rayfield:Notify({
-   Title = "UPF",
-   Content = "Loaded",
-   Duration = 3
-})
+UIS.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.K then
+        if Visual.Enabled then
+            Visual:Disable()
+        else
+            Visual:Enable()
+        end
+    end
+end)
 
 print("✅ UI loaded")
