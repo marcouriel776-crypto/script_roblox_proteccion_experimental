@@ -5,6 +5,8 @@ local MODULES = {
     "module_core.lua",
     "module_assets.lua",
     "module_visual.lua",
+    "module_scanner.lua",
+    "module_devil.lua",
     "module_ui.lua"
 }
 
